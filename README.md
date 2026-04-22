@@ -1,16 +1,18 @@
 # AI War Game
 
-A Python CLI game where AI agents battle each other.
+AI-driven sandbox warfare game (AI局沙盘) built on [Hermes Agent](https://github.com/nousresearch/hermes-agent).
 
 ## Getting Started
 
 ```bash
-# TODO: add setup instructions once project is initialized
-python -m ai_war_game
+uv run python main.py
 ```
 
 ## Development
 
 ```bash
-# TODO: add development commands (install, test, lint)
+uv add <package>       # Add dependency
+uv run pytest          # Run tests
+uv run ruff check .    # Lint
+uv run ruff format .   # Format
 ```
