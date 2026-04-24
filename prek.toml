@@ -1,0 +1,45 @@
+# Configuration file for `prek`, a git hook framework written in Rust.
+#:schema https://www.schemastore.org/prek.json
+
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "python-fmt"
+name = "ruff format"
+entry = "uv run ruff format --check ."
+language = "system"
+types = ["python"]
+pass_filenames = false
+
+[[repos.hooks]]
+id = "python-lint"
+name = "ruff check"
+entry = "uv run ruff check ."
+language = "system"
+types = ["python"]
+pass_filenames = false
+
+[[repos.hooks]]
+id = "python-test"
+name = "pytest"
+entry = "uv run python tools/run_pytest_hook.py"
+language = "system"
+pass_filenames = false
+always_run = true
+
+[[repos.hooks]]
+id = "python-security"
+name = "pip-audit"
+entry = "uv run pip-audit"
+language = "system"
+pass_filenames = false
+always_run = true
+stages = ["pre-push", "manual"]
+
+[[repos.hooks]]
+id = "typos"
+name = "typos"
+entry = "typos"
+language = "system"
+exclude = "^uv\\.lock$"

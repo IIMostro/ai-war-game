@@ -12,7 +12,12 @@ uv run python main.py
 
 ```bash
 uv add <package>       # Add dependency
+uv add --dev <package> # Add development dependency
 uv run pytest          # Run tests
 uv run ruff check .    # Lint
 uv run ruff format .   # Format
+uv run pip-audit       # Audit Python dependencies
+prek validate-config   # Validate prek config
+prek run --all-files   # Run all configured hooks
+prek install           # Install git hooks
 ```
