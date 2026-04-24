@@ -33,3 +33,4 @@ coverage.xml
 logs/
 data/
 tmp/
+.codex
