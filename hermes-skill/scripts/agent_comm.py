@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 HERMES_ROOT = os.path.join(os.path.expanduser("~"), ".hermes")
+OUTBOX_FILE = "outbox.json"
 
 
 def general_profile_dir(general_id: str) -> str:
@@ -27,10 +28,10 @@ def _process_general(general_id: str, timeout: int) -> dict:
     prof_dir = Path(general_profile_dir(general_id))
     inbox = prof_dir / "inbox.json"
 
-    if not inbox.is_file():
-        return {"general": general_id, "status": "error", "error": "inbox not found"}
-
-    context = inbox.read_text(encoding="utf-8")
+    try:
+        context = inbox.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return {"general": general_id, "status": "error", "error": f"inbox 不存在: {inbox}"}
     try:
         result = subprocess.run(
             ["hermes", "-p", general_id, "chat", "-q", context],
@@ -61,16 +62,18 @@ def invoke_generals(general_ids: list[str], timeout: int = 120) -> list[dict]:
     return results
 
 
-def collect_responses(general_ids: list[str], timeout: int = 30) -> list[dict]:
+def collect_responses(general_ids: list[str]) -> list[dict]:
     results: list[dict] = []
     for gid in general_ids:
-        prof_dir = Path(general_profile_dir(gid))
-        outbox = prof_dir / "outbox.json"
-        if outbox.is_file():
-            content = outbox.read_text(encoding="utf-8")
-            results.append({"general": gid, "response": content, "status": "ready"})
-        else:
+        outbox_path = os.path.join(general_profile_dir(gid), OUTBOX_FILE)
+        try:
+            with open(outbox_path, encoding="utf-8") as f:
+                response = f.read()
+            results.append({"general": gid, "response": response, "status": "ready"})
+        except FileNotFoundError:
             results.append({"general": gid, "status": "pending"})
+        except OSError as e:
+            results.append({"general": gid, "status": "error", "error": str(e)})
     return results
 
 
@@ -111,7 +114,6 @@ def main(argv: list[str] | None = None) -> int:
 
     collect_p = sub.add_parser("collect", help="Collect responses from generals")
     collect_p.add_argument("--generals", required=True, help="Comma-separated general IDs")
-    collect_p.add_argument("--timeout", type=int, default=30, help="Timeout (unused)")
 
     sub.add_parser("status", help="Show status of all general profiles")
 
@@ -126,7 +128,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(results, ensure_ascii=False, indent=2))
     elif args.command == "collect":
         gids = [g.strip() for g in args.generals.split(",") if g.strip()]
-        results = collect_responses(gids, timeout=args.timeout)
+        results = collect_responses(gids)
         print(json.dumps(results, ensure_ascii=False, indent=2))
     elif args.command == "status":
         results = get_status()

@@ -71,8 +71,44 @@ terminal("python3 scripts/db.py general list")
 - 战斗结果由 LLM 综合数值、天气、地形、粮草和武将人格生成
 - 武将人格影响战斗决策风格
 
+## 多 Agent 通信
+
+当需要武将决策时（战斗、外交、内政等），使用以下流程：
+
+### 武将决策流程
+
+1. 构造局势描述，发送给每位相关武将：
+
+   terminal('python3 scripts/agent_comm.py send --general caocao --context \'{"situation": "...", "current_day": N, "your_troops": N, ...}\'')
+   terminal('python3 scripts/agent_comm.py send --general liubei --context \'...\'')
+
+2. 并行调用所有武将获取决策：
+
+   terminal('python3 scripts/agent_comm.py invoke --generals caocao,liubei --timeout 120')
+
+3. 收集武将响应：
+
+   terminal('python3 scripts/agent_comm.py collect --generals caocao,liubei')
+
+4. 检查各武将状态：
+
+   terminal('python3 scripts/agent_comm.py status')
+
+### 决策流程说明
+
+- **send**: 将当前局势写入武将的 inbox.json。context 应包含武将知道的信息（敌军兵力、地形、自身状态等），但不包含其他武将的机密
+- **invoke**: 并行启动 hermes 进程，每位武将根据 SOUL.md 中的人格、数值和当前局势做决策，输出 JSON 到 outbox.json
+- **collect**: 读取各武将的 outbox，返回状态（ready/pending/error）
+- **status**: 查看所有武将的 inbox/outbox/SOUL 状态
+
+每位武将返回的 JSON 格式：
+{"action": "fight|retreat|negotiate|idle|rebel|advise", "effort": 0.0-1.0, "target": "...", "narrative": "..."}
+
+收到所有响应后，由你（GM）综合生成最终结果。
+
 ## 重要约束
 - 不要修改数据库直接——总是通过 scripts/db.py 操作
 - 不要展示原始 SQL 给玩家
 - 所有展示通过 scripts/view.py 格式化
+- 所有 Agent 通信通过 scripts/agent_comm.py 完成
 - 中文输出，简洁为主
