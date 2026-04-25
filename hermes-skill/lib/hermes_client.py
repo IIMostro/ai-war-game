@@ -1,11 +1,10 @@
-"""hermes-skill/lib/hermes_client.py — Hermes environment check + LLM call."""
+"""hermes-skill/lib/hermes_client.py — Hermes environment check + subprocess LLM call."""
 
 import json
 import os
 import shutil
+import subprocess
 from pathlib import Path
-
-from llm_client import llm_chat
 
 ENV_BIN = "AI_WAR_GAME_HERMES_BIN"
 ENV_MODEL = "AI_WAR_GAME_HERMES_MODEL"
@@ -27,18 +26,9 @@ class ScenarioInvalidError(Exception):
 
 
 def check_environment() -> None:
-    """检查 LLM 环境。direct 模式下检查 API key; hermes 模式下检查 CLI / model / config。"""
-    mode = os.environ.get("AI_WAR_GAME_LLM_MODE", "hermes").strip().lower()
-
-    if mode == "direct":
-        api_key = os.environ.get("AI_WAR_GAME_LLM_API_KEY") or os.environ.get("OPENAI_API_KEY", "")
-        if not api_key:
-            raise HermesUnavailableError(
-                "direct 模式需要设置 AI_WAR_GAME_LLM_API_KEY 或 OPENAI_API_KEY"
-            )
-        return
-
+    """检查 Hermes CLI / model / config 是否可用。失败时抛 HermesUnavailableError。"""
     reasons: list[str] = []
+
     bin_value = os.environ.get(ENV_BIN, DEFAULT_BIN)
     if _resolve_executable(bin_value) is None:
         reasons.append(f"未找到 hermes 可执行文件 (env {ENV_BIN}={bin_value})")
@@ -60,9 +50,39 @@ def check_environment() -> None:
 
 
 def call_hermes(prompt: str) -> str:
-    """调用 LLM 生成剧本。使用 llm_client (direct 或 hermes 模式)。"""
-    system_prompt = "You are a game scenario generator. Output only valid JSON."
-    return llm_chat(system_prompt=system_prompt, user_message=prompt)
+    """调用 Hermes CLI 发送 prompt, 返回原始 stdout。失败时抛 ScenarioGenerationError。"""
+    check_environment()
+    bin_path = os.environ.get(ENV_BIN, DEFAULT_BIN)
+    model = os.environ.get(ENV_MODEL, "")
+    config_path = os.environ.get(ENV_CONFIG, "")
+
+    argv = [
+        bin_path,
+        "skill",
+        "run",
+        "scenario-generator",
+        "--model",
+        model,
+        "--config",
+        config_path,
+    ]
+    try:
+        completed = subprocess.run(
+            argv,
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=HERMES_TIMEOUT,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise ScenarioGenerationError(f"hermes 未找到: {exc}") from exc
+
+    if completed.returncode != 0:
+        raise ScenarioGenerationError(
+            f"hermes 退出码 {completed.returncode}: {completed.stderr.strip() or '(无 stderr)'}"
+        )
+    return completed.stdout
 
 
 def parse_json_response(raw: str) -> dict:
