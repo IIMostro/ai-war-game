@@ -85,9 +85,37 @@ terminal('python3 scripts/time_engine.py show-queue')
 1. 调用 time_engine.py 查询行军时间：
    terminal('python3 scripts/time_engine.py march-days --from <city> --to <city>')
 
-### 战斗（后续版本）
-- 战斗结果由 LLM 综合数值、天气、地形、粮草和武将人格生成
-- 武将人格影响战斗决策风格
+### 战斗
+玩家下令攻击时，执行战斗流程：
+
+1. 使用 battle.py 启动战斗，向双方武将发送战场上下文并收集决策：
+
+   terminal('python3 scripts/battle.py start --attacker <id> --defender <id> --city <city_id>')
+
+   返回的数据包含：参战双方信息、已发送到 inbox 的上下文、武将决策响应。
+
+2. 你（GM）综合所有武将决策、数值、天气、地形、粮草，生成战斗结果：
+
+   战斗结果格式：
+   {"outcome": "attacker_win|defender_win|draw", "attacker_id": "...", "defender_id": "...",
+    "city_id": "...", "attacker_troops_lost": N, "defender_troops_lost": N,
+    "attacker_final_troops": N, "defender_final_troops": N,
+    "new_owner": "faction_id|null",
+    "narrative_concise": "...", "narrative_detailed": "..."}
+
+3. 应用战斗结果到数据库：
+
+   terminal('python3 scripts/battle.py apply --result \'<上述 JSON>\'')
+
+4. 展示战报：
+
+   terminal('python3 scripts/battle.py report --mode concise|detailed')
+
+### 战报模式
+玩家说"简单战报"、"详细战报"、"简洁模式"、"详细模式"时：
+
+terminal('python3 scripts/battle.py mode concise')
+terminal('python3 scripts/battle.py mode detailed')
 
 ## 多 Agent 通信
 
