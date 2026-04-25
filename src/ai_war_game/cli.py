@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 
 from ai_war_game import db as war_db
@@ -121,6 +122,11 @@ def run_cli(argv: list[str] | None = None) -> int:
                 print("用法: new-game --theme <主题> --player <武将名>")
                 print("  例如: new-game --theme 黄巾之乱 --player 曹操")
                 continue
+
+            for f in [db_path, war_db.get_graph_path(db_path), get_event_queue_path(db_path)]:
+                if os.path.exists(f):
+                    os.remove(f)
+
             try:
                 result = init_scenario(theme, player, db_path)
                 print(f"世界生成完成: {result['scenario']}")

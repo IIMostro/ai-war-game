@@ -111,14 +111,23 @@ def trigger_autonomy(conn: sqlite3.Connection, general_id: str) -> dict:
     narrative = decision.get("narrative", "")
 
     add_memory(
-        conn, general_id, current_day, f"autonomy_{action}",
+        conn,
+        general_id,
+        current_day,
+        f"autonomy_{action}",
         f"{general['name']}决定{action}: {narrative[:100]}",
     )
     log_event(
-        conn, current_day, 0, f"autonomy_{action}",
-        general_id, None,
-        json.dumps({"name": general["name"], "action": action,
-                     "narrative": narrative[:200]}, ensure_ascii=False),
+        conn,
+        current_day,
+        0,
+        f"autonomy_{action}",
+        general_id,
+        None,
+        json.dumps(
+            {"name": general["name"], "action": action, "narrative": narrative[:200]},
+            ensure_ascii=False,
+        ),
     )
 
     return {"general": general_id, "name": general["name"], "decision": decision}
