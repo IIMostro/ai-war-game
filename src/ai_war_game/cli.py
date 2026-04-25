@@ -66,6 +66,7 @@ def _has_game(db_path: str) -> bool:
 def _list_generals(conn: sqlite3.Connection) -> list[dict]:
     cursor = conn.execute(
         "SELECT g.id, g.name, g.troops, g.food, g.loyalty, g.is_player, "
+        "g.faction_id, "
         "c.name AS city, f.name AS faction "
         "FROM generals g "
         "LEFT JOIN cities c ON g.position_city_id = c.id "
@@ -168,14 +169,17 @@ def run_cli(argv: list[str] | None = None) -> int:
                 if not rows:
                     print("(无武将)")
                     continue
-                print(f"【武将列表】共 {len(rows)} 人")
+                print(f"【武将列表】共 {len(rows)} 人  (battle --attacker <id> --defender <id>)")
                 for g in rows:
                     player_tag = " ★" if g["is_player"] else ""
                     city = g["city"] or g["faction"] or "?"
                     food_warn = " ⚠" if g["food"] and g["food"] < 5 else ""
+                    loyalty_display = ""
+                    if g["loyalty"] is not None and g["loyalty"] < 50:
+                        loyalty_display = " \U0001f4a2"
                     print(
-                        f"  {g['name']}{player_tag}"
-                        f"  兵 {g['troops']}  粮 {g['food']}日{food_warn}"
+                        f"  [{g['id']}] {g['name']}{player_tag}"
+                        f"  兵 {g['troops']}  粮 {g['food']}日{food_warn}{loyalty_display}"
                         f"  [{city}]"
                     )
             finally:
@@ -278,30 +282,27 @@ def run_cli(argv: list[str] | None = None) -> int:
                     print(f"  {'，'.join(parts_str)}")
 
                 autonomy_results = trigger_all_autonomy(conn)
-                if autonomy_results:
+                changed_results = [r for r in autonomy_results if r.get("changed")]
+                if changed_results:
                     print("\n  ── 武将动向 ──")
-                    for r in autonomy_results:
-                        name = r.get("name", r.get("general", "?"))
+                    for r in changed_results:
+                        name = r.get("name", "?")
                         decision = r.get("decision", {})
                         action = decision.get("action", "idle")
                         narrative = decision.get("narrative", "")
-                        effort = decision.get("effort", 0)
                         ai_actions = {
                             "idle": "按兵不动",
-                            "fight": "准备出战",
-                            "retreat": "准备撤退",
-                            "negotiate": "寻求交涉",
-                            "rebel": "图谋不轨!!",
-                            "advise": "有所建言",
                             "train": "操练兵马",
                             "recruit": "招募兵勇",
-                            "fortify": "修筑城防",
+                            "forage": "征集粮草",
+                            "raid": "出兵掠夺",
+                            "rebel": "叛变自立!!",
                         }
-                        action_label = ai_actions.get(action, action)
-                        effort_bar = "█" * int(effort * 10) + "░" * (10 - int(effort * 10))
-                        print(f"  {name}: {action_label} [{effort_bar}]")
-                        if narrative and len(narrative) < 80:
-                            print(f"          {narrative}")
+                        label = ai_actions.get(action, action)
+                        marker = "\U0001f4a2" if action == "rebel" else "\U0001f7e2"
+                        print(f"  {marker} {name}: {label}")
+                        if narrative:
+                            print(f"      {narrative}")
                     print()
             finally:
                 conn.close()
