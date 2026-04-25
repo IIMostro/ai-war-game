@@ -34,3 +34,4 @@ logs/
 data/
 tmp/
 .codex
+.worktrees/
