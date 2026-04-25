@@ -1,6 +1,5 @@
-"""遗留入口. 请使用 `ai-war-game` 命令或 `uv run python -m ai_war_game`."""
-
-from ai_war_game.cli.app import run
+"""Entry point. Use `uv run python -m ai_war_game` or `ai-war-game` CLI."""
+from ai_war_game.cli import run_cli
 
 if __name__ == "__main__":
-    raise SystemExit(run())
+    raise SystemExit(run_cli())

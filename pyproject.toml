@@ -16,6 +16,9 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[project.scripts]
+ai-war-game = "ai_war_game.__main__:main"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
@@ -24,7 +27,7 @@ pythonpath = ["src", "hermes-skill/lib", "hermes-skill/scripts"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["src", "tests", "hermes-skill/lib", "hermes-skill/scripts"]
+src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "RUF", "SIM"]
