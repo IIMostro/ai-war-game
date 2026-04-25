@@ -102,13 +102,13 @@ class TestFormatShow:
 
 class TestFormatGeneral:
     def test_player_general_has_no_loyalty(self, conn):
-        lines = format_general(conn, "caocao", _SAMPLE_PERSONALITY)
+        lines = format_general(conn, "caocao")
         output = "\n".join(lines)
         assert "曹操" in output
         assert "72" in output
 
     def test_ai_general_shows_loyalty(self, conn):
-        lines = format_general(conn, "xiahou", "{}")
+        lines = format_general(conn, "xiahou")
         output = "\n".join(lines)
         assert "夏侯惇" in output
         assert "95" in output

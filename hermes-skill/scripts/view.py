@@ -71,7 +71,6 @@ def format_show(
 def format_general(
     conn: sqlite3.Connection,
     general_id: str,
-    personality_json: str,
 ) -> list[str]:
     general = get_general(conn, general_id)
     if general is None:
@@ -111,7 +110,10 @@ def format_general(
     lines.append(f"兵力: {general['troops']}")
     lines.append(f"粮草: {general['food']} 日")
 
-    personality = json.loads(personality_json)
+    try:
+        personality = json.loads(general["personality"])
+    except (json.JSONDecodeError, TypeError):
+        personality = {}
     if personality:
         lines.append("")
         if "temperament" in personality:
@@ -224,12 +226,7 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "general":
         db_path = get_db_path(getattr(args, "general_db_path", None), __file__)
         conn = sqlite3.connect(db_path)
-        general = get_general(conn, args.id)
-        if general is None:
-            print(f"错误: 未找到武将 {args.id}")
-            conn.close()
-            return 1
-        lines = format_general(conn, args.id, general["personality"])
+        lines = format_general(conn, args.id)
         conn.close()
         print("\n".join(lines))
 
