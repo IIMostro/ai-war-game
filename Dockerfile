@@ -20,6 +20,7 @@ FROM python:3.12-slim
 WORKDIR /app
 COPY . .
 
+ENV PYTHONPATH=/app/src
 RUN pip install --no-cache-dir -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com litellm
 
 VOLUME ["/app/data"]
