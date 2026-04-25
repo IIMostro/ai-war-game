@@ -54,9 +54,7 @@ def _process_general(general_id: str, timeout: int) -> dict:
 def invoke_generals(general_ids: list[str], timeout: int = 120) -> list[dict]:
     results: list[dict] = []
     with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {
-            executor.submit(_process_general, gid, timeout): gid for gid in general_ids
-        }
+        futures = {executor.submit(_process_general, gid, timeout): gid for gid in general_ids}
         for future in as_completed(futures):
             results.append(future.result())
     return results

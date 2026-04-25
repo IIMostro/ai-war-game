@@ -72,7 +72,9 @@ class TestCallHermes:
                 returncode = 0
                 stdout = '{"summary": "test"}'
                 stderr = ""
+
             return Result()
+
         hermes_bin = tmp_path / "hermes"
         hermes_bin.write_text("#!/bin/sh\nexit 0\n")
         hermes_bin.chmod(hermes_bin.stat().st_mode | stat.S_IXUSR)
@@ -92,7 +94,9 @@ class TestCallHermes:
                 returncode = 1
                 stdout = ""
                 stderr = "error msg"
+
             return Result()
+
         hermes_bin = tmp_path / "hermes"
         hermes_bin.write_text("#!/bin/sh\nexit 0\n")
         hermes_bin.chmod(hermes_bin.stat().st_mode | stat.S_IXUSR)

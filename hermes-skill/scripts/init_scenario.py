@@ -54,8 +54,18 @@ def validate_scenario(data: dict) -> None:
             raise ScenarioInitError(f"cities[{i}] 缺少字段: {missing}")
 
     required_general_fields = {
-        "id", "name", "war", "command", "intel", "politics", "charm",
-        "troops", "food", "position", "faction", "is_player",
+        "id",
+        "name",
+        "war",
+        "command",
+        "intel",
+        "politics",
+        "charm",
+        "troops",
+        "food",
+        "position",
+        "faction",
+        "is_player",
     }
     for i, g in enumerate(generals):
         missing = required_general_fields - set(g.keys())
@@ -95,47 +105,33 @@ def validate_scenario(data: dict) -> None:
     for g in generals:
         pos = g.get("position")
         if pos not in city_ids:
-            raise ScenarioInitError(
-                f"武将 {g['id']} 的 position '{pos}' 引用不存在的城池"
-            )
+            raise ScenarioInitError(f"武将 {g['id']} 的 position '{pos}' 引用不存在的城池")
 
         for stat in ("war", "command", "intel", "politics", "charm"):
             val = g.get(stat)
             if not isinstance(val, int) or val < 1 or val > 100:
-                raise ScenarioInitError(
-                    f"武将 {g['id']} 的 {stat} 值 {val} 超出范围 1-100"
-                )
+                raise ScenarioInitError(f"武将 {g['id']} 的 {stat} 值 {val} 超出范围 1-100")
 
         troops = g.get("troops")
         if not isinstance(troops, int) or troops < 100 or troops > 100000:
-            raise ScenarioInitError(
-                f"武将 {g['id']} 的 troops {troops} 超出范围 100-100000"
-            )
+            raise ScenarioInitError(f"武将 {g['id']} 的 troops {troops} 超出范围 100-100000")
 
         food = g.get("food")
         if not isinstance(food, int) or food < 1 or food > 365:
-            raise ScenarioInitError(
-                f"武将 {g['id']} 的 food {food} 超出范围 1-365"
-            )
+            raise ScenarioInitError(f"武将 {g['id']} 的 food {food} 超出范围 1-365")
 
         if not g.get("is_player"):
             loy = g.get("loyalty")
             if loy is not None and (not isinstance(loy, int) or loy < 1 or loy > 100):
-                raise ScenarioInitError(
-                    f"武将 {g['id']} 的 loyalty={loy} 必须为 null 或 1-100"
-                )
+                raise ScenarioInitError(f"武将 {g['id']} 的 loyalty={loy} 必须为 null 或 1-100")
 
     for conn in connections:
         from_id = conn.get("from")
         to_id = conn.get("to")
         if from_id not in city_ids:
-            raise ScenarioInitError(
-                f"connection from '{from_id}' 引用不存在的城池"
-            )
+            raise ScenarioInitError(f"connection from '{from_id}' 引用不存在的城池")
         if to_id not in city_ids:
-            raise ScenarioInitError(
-                f"connection to '{to_id}' 引用不存在的城池"
-            )
+            raise ScenarioInitError(f"connection to '{to_id}' 引用不存在的城池")
 
 
 def build_scenario_prompt(theme: str, player_name: str) -> str:
@@ -224,9 +220,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--db-path", default=None, help="Path to SQLite database file")
     args = parser.parse_args(argv)
 
-    db_path = args.db_path or str(
-        Path(_SCRIPT_DIR).resolve().parent.parent / "data" / "game.db"
-    )
+    db_path = args.db_path or str(Path(_SCRIPT_DIR).resolve().parent.parent / "data" / "game.db")
     graph_path = get_graph_path(db_path)
 
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
@@ -287,9 +281,7 @@ def main(argv: list[str] | None = None) -> int:
         upsert_state(conn, "current_day", str(state.get("day", 1)), 1)
         upsert_state(conn, "season", state.get("season", "春"), 1)
         upsert_state(conn, "weather", state.get("weather", "晴"), 1)
-        upsert_state(
-            conn, "scenario_name", scenario_data.get("scenario", ""), 1
-        )
+        upsert_state(conn, "scenario_name", scenario_data.get("scenario", ""), 1)
         upsert_state(
             conn,
             "player_identity",

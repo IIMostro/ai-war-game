@@ -54,7 +54,9 @@ class TestInvokeGenerals:
                 returncode = 0
                 stdout = '{"action": "fight", "effort": 0.9}'
                 stderr = ""
+
             return Result()
+
         monkeypatch.setattr("agent_comm.subprocess.run", fake_run)
 
         results = invoke_generals(["caocao"], timeout=10)

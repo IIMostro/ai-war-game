@@ -90,9 +90,7 @@ def parse_json_response(raw: str) -> dict:
     try:
         return dict(json.loads(raw))
     except (json.JSONDecodeError, ValueError, TypeError) as exc:
-        raise ScenarioInvalidError(
-            f"hermes 输出不是合法 JSON: {exc}; raw={raw[:200]!r}"
-        ) from exc
+        raise ScenarioInvalidError(f"hermes 输出不是合法 JSON: {exc}; raw={raw[:200]!r}") from exc
 
 
 def _resolve_executable(value: str) -> Path | None:
