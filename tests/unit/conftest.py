@@ -5,31 +5,35 @@ from pathlib import Path
 
 import pytest
 
-from ai_war_game.application.ports import GameRepository, HermesHealth, ScenarioGenerator
-from ai_war_game.domain.errors import SaveNotFoundError
+from ai_war_game.domain.errors import HermesUnavailableError, SaveNotFoundError
 from ai_war_game.domain.events import GameEvent
 from ai_war_game.domain.scenario import Scenario
 from ai_war_game.domain.session import GameSession
 
 
-class FakeHermesHealth(HermesHealth):
-    def __init__(self, *, ok: bool) -> None:
+class FakeHermesHealth:
+    def __init__(self, *, ok: bool, reasons: tuple[str, ...] = ()) -> None:
         self._ok = ok
+        self._reasons = reasons
 
-    def check(self) -> bool:
-        return self._ok
+    def check(self) -> None:
+        if not self._ok:
+            raise HermesUnavailableError("; ".join(self._reasons) or "fake unavailable")
 
 
-class FakeScenarioGenerator(ScenarioGenerator):
+class FakeScenarioGenerator:
     def generate(self, *, theme: str, player_display_name: str) -> Scenario:
         return Scenario(
             theme=theme,
             summary=f"{player_display_name} 加入 {theme} 战局。",
             starting_day=1,
             raw_payload={
-                "theme": theme,
-                "player_display_name": player_display_name,
-                "player_faction_id": "shu",
+                "summary": f"{player_display_name} 加入 {theme} 战局。",
+                "starting_day": 1,
+                "player": {
+                    "display_name": player_display_name,
+                    "faction_id": "shu",
+                },
                 "factions": [
                     {
                         "faction_id": "shu",
@@ -56,7 +60,7 @@ class FakeScenarioGenerator(ScenarioGenerator):
         )
 
 
-class InMemoryGameRepository(GameRepository):
+class InMemoryGameRepository:
     def __init__(self) -> None:
         self._sessions: dict[str, GameSession] = {}
         self._events: dict[str, list[GameEvent]] = {}
@@ -92,7 +96,7 @@ def fake_hermes_ok() -> FakeHermesHealth:
 
 @pytest.fixture
 def fake_hermes_failing() -> FakeHermesHealth:
-    return FakeHermesHealth(ok=False)
+    return FakeHermesHealth(ok=False, reasons=("hermes 未安装", "缺少 model 配置"))
 
 
 @pytest.fixture

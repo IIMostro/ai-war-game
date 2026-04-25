@@ -9,7 +9,9 @@ from ai_war_game.domain.session import GameSession
 
 @runtime_checkable
 class HermesHealth(Protocol):
-    def check(self) -> bool: ...
+    def check(self) -> None:
+        """检查 Hermes 运行环境, 失败时抛 HermesUnavailableError."""
+        ...
 
 
 @runtime_checkable
