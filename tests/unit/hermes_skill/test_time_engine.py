@@ -2,6 +2,7 @@
 
 import json
 import sqlite3
+import subprocess
 
 import pytest
 
@@ -182,6 +183,26 @@ class TestMarchDays:
     def test_returns_none_for_no_connection(self, graph_with_connection):
         days = march_days(graph_with_connection, "luoyang", "nonexistent")
         assert days is None
+
+
+class TestCLI:
+    def test_march_days_via_main(self, graph_with_connection, tmp_path, monkeypatch):
+        db_path = tmp_path / "test.db"
+        monkeypatch.setattr("time_engine.get_db_path", lambda *args: str(db_path))
+        monkeypatch.setattr("time_engine.get_graph_path", lambda *args: str(graph_with_connection))
+        conn = sqlite3.connect(str(db_path))
+        create_schema(conn)
+        conn.close()
+        result = subprocess.run(
+            ["python3", "hermes-skill/scripts/time_engine.py", "march-days",
+             "--from", "luoyang", "--to", "yingchuan",
+             "--db-path", str(db_path)],
+            capture_output=True, text=True,
+        )
+        assert result.returncode == 0
+        import json
+        data = json.loads(result.stdout)
+        assert data["days"] == 5
 
 
 class TestProcessDueEvents:

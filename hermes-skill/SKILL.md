@@ -67,6 +67,24 @@ terminal("python3 scripts/db.py general list")
 - 按天推进。每 30 天轮换季节：春→夏→秋→冬
 - 天气每日变化：晴/雨/阴/雪，受季节影响
 
+### 时间推进
+玩家说"等待 N 天"、"休整"、"推进"时，执行：
+
+terminal('python3 scripts/time_engine.py advance --days N')
+
+推进过程中触发的事件会返回给玩家。
+
+### 查看事件队列
+玩家说"查看事件"、"待处理事件"时：
+
+terminal('python3 scripts/time_engine.py show-queue')
+
+### 行军（后续版本完善）
+玩家下令行军时，计算行军天数并安排到达事件：
+
+1. 调用 time_engine.py 查询行军时间：
+   terminal('python3 scripts/time_engine.py march-days --from <city> --to <city>')
+
 ### 战斗（后续版本）
 - 战斗结果由 LLM 综合数值、天气、地形、粮草和武将人格生成
 - 武将人格影响战斗决策风格

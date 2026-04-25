@@ -229,6 +229,11 @@ def main(argv: list[str] | None = None) -> int:
     weather_parser = sub.add_parser("weather", help="Generate and show today's weather")
     weather_parser.add_argument("--db-path", dest="weather_db_path", default=None)
 
+    p_march = sub.add_parser("march-days", help="Calculate march days between cities")
+    p_march.add_argument("--from", dest="from_city", required=True)
+    p_march.add_argument("--to", dest="to_city", required=True)
+    p_march.add_argument("--db-path", dest="db_path_arg")
+
     args = parser.parse_args(argv)
 
     if args.command == "advance":
@@ -265,6 +270,17 @@ def main(argv: list[str] | None = None) -> int:
         weather = generate_weather(season)
         print(json.dumps({"season": season, "weather": weather}, ensure_ascii=False))
         conn.close()
+
+    elif args.command == "march-days":
+        graph_path = get_graph_path(get_db_path(getattr(args, "db_path_arg", None), __file__))
+        days = march_days(graph_path, args.from_city, args.to_city)
+        result = {"from": args.from_city, "to": args.to_city}
+        if days is not None:
+            result["days"] = days
+        else:
+            result["error"] = "未找到连接"
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
 
     return 0
 
