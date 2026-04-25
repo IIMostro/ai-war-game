@@ -33,7 +33,6 @@ def register(sub) -> None:
 def _handler(args: argparse.Namespace, *, save_root: Path) -> int:
     repo = FileGameRepository(SaveLocator(root=save_root))
     health = HermesEnvironmentCheck()
-    health.check()
     bin_path = os.environ.get(ENV_BIN, DEFAULT_BIN)
     model = os.environ.get(ENV_MODEL, "")
     config_path = os.environ.get(ENV_CONFIG, "")

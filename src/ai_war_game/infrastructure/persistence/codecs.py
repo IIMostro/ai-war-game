@@ -77,14 +77,17 @@ def decode_session(payload: dict[str, Any]) -> GameSession:
     version = payload.get("schema_version")
     if version != SCHEMA_VERSION:
         raise SaveCorruptedError(f"不支持的 schema_version={version} (期望 {SCHEMA_VERSION})")
-    return GameSession(
-        save_id=payload["save_id"],
-        created_at=datetime.fromisoformat(payload["created_at"]),
-        updated_at=datetime.fromisoformat(payload["updated_at"]),
-        player=PlayerIdentity(**payload["player"]),
-        scenario=Scenario(**payload["scenario"]),
-        world=decode_world(payload["world"]),
-    )
+    try:
+        return GameSession(
+            save_id=payload["save_id"],
+            created_at=datetime.fromisoformat(payload["created_at"]),
+            updated_at=datetime.fromisoformat(payload["updated_at"]),
+            player=PlayerIdentity(**payload["player"]),
+            scenario=Scenario(**payload["scenario"]),
+            world=decode_world(payload["world"]),
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise SaveCorruptedError(f"session 结构损坏: {exc}") from exc
 
 
 def encode_event(event: GameEvent) -> dict[str, Any]:
@@ -98,10 +101,13 @@ def encode_event(event: GameEvent) -> dict[str, Any]:
 
 
 def decode_event(payload: dict[str, Any]) -> GameEvent:
-    return GameEvent(
-        event_id=payload["event_id"],
-        kind=payload["kind"],
-        day=int(payload["day"]),
-        occurred_at=datetime.fromisoformat(payload["occurred_at"]),
-        payload=payload.get("payload", {}),
-    )
+    try:
+        return GameEvent(
+            event_id=payload["event_id"],
+            kind=payload["kind"],
+            day=int(payload["day"]),
+            occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+            payload=payload.get("payload", {}),
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise SaveCorruptedError(f"event 结构损坏: {exc}") from exc

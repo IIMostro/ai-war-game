@@ -11,7 +11,10 @@ class ShowGameService:
     def execute(self, *, save_id: str) -> ShowGameOutput:
         session = self._repository.load_session(save_id)
         faction = session.world.faction(session.player.faction_id)
-        recent_events = tuple(event.kind for event in self._repository.events(save_id))
+        events = self._repository.events(save_id)
+        recent_events = tuple(
+            f"[第 {e.day} 天] {e.kind}: {e.payload.get('text', '')}" for e in events[-10:]
+        )
         return ShowGameOutput(
             save_id=session.save_id,
             current_day=session.world.current_day,
