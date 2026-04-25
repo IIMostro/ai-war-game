@@ -9,6 +9,12 @@ import sqlite3
 from ai_war_game import db as war_db
 from ai_war_game import view as war_view
 from ai_war_game.autonomy import trigger_all_autonomy
+from ai_war_game.battle import (
+    apply_battle_result,
+    format_battle_report,
+    resolve_battle,
+    start_battle,
+)
 from ai_war_game.engine import advance_time, get_event_queue_path
 from ai_war_game.init_scenario import init_scenario
 from ai_war_game.llm import LLMError, llm_call
@@ -206,7 +212,8 @@ def run_cli(argv: list[str] | None = None) -> int:
             if not _has_game(db_path):
                 print("还没有游戏。输入 new-game --theme <主题> --player <武将名> 创建新局")
                 continue
-            lines = _run_with_db(war_view.format_map, db_path)
+            graph_path = war_db.get_graph_path(db_path)
+            lines = _run_with_db(war_view.format_map, db_path, graph_path)
             print("\n".join(lines))
 
         elif cmd in ("events", "查看事件"):
@@ -308,7 +315,86 @@ def run_cli(argv: list[str] | None = None) -> int:
                 conn.close()
 
         elif cmd.startswith("battle") or cmd.startswith("攻击"):
-            print("战斗系统: 正在开发中，请使用 'advance' 推进时间")
+            if not _has_game(db_path):
+                print("还没有游戏。输入 new-game --theme <主题> --player <武将名> 创建新局")
+                continue
+            parts = cmd.split()
+            try:
+                atk_idx = parts.index("--attacker") + 1
+                dfd_idx = parts.index("--defender") + 1
+                attacker_id = parts[atk_idx]
+                defender_id = parts[dfd_idx]
+            except (ValueError, IndexError):
+                print("用法: battle --attacker <id> --defender <id>")
+                print("  例如: battle --attacker Cao_Cao --defender Liu_Bei")
+                continue
+
+            queue_path = get_event_queue_path(db_path)
+            graph_path = war_db.get_graph_path(db_path)
+            conn = sqlite3.connect(db_path)
+            try:
+                battle_data = start_battle(
+                    conn,
+                    queue_path,
+                    graph_path,
+                    attacker_id,
+                    defender_id,
+                    "",
+                )
+
+                # Handle scheduled (march) vs immediate battle
+                if battle_data.get("scheduled"):
+                    cursor = conn.execute(
+                        "SELECT value FROM game_state WHERE key='player_identity'"
+                    )
+                    player_identity = json.loads(cursor.fetchone()[0])
+                    pid = player_identity.get("id", "")
+                    pg = war_db.get_general(conn, pid)
+                    pname = pg["name"] if pg else pid
+                    pfid = pg["faction_id"] if pg else ""
+
+                    print(
+                        f"\n⚔ {battle_data['attacker_name']} 从"
+                        f" {battle_data['attacker_city_id']} 出发，"
+                        f"向 {battle_data['defender_name']} 进军，"
+                        f"预计 {battle_data['march_days']} 天后到达\n"
+                    )
+                    if pfid:
+                        lines = war_view.format_show(conn, pfid, pid, pname)
+                        print("\n".join(lines))
+                else:
+                    print("\n【战场评估】双方武将决策中...\n")
+                    result = resolve_battle(battle_data)
+                    apply_battle_result(conn, result)
+
+                    report = format_battle_report(
+                        [{"event_type": "battle", "details_json": json.dumps(result)}],
+                        "concise",
+                    )
+                    print(report)
+                    print()
+
+                    # Show from player's perspective, not attacker's
+                    cursor = conn.execute(
+                        "SELECT value FROM game_state WHERE key='player_identity'"
+                    )
+                    player_identity = json.loads(cursor.fetchone()[0])
+                    pid = player_identity.get("id", "")
+                    pg = war_db.get_general(conn, pid)
+                    pname = pg["name"] if pg else pid
+                    pfid = (
+                        pg["faction_id"]
+                        if pg
+                        else battle_data["participants"]["attacker"]["faction_id"]
+                    )
+                    lines = war_view.format_show(conn, pfid, pid, pname)
+                    print("\n".join(lines))
+            except ValueError as e:
+                print(f"战斗参数错误: {e}")
+            except Exception as e:
+                print(f"战斗执行失败: {e}")
+            finally:
+                conn.close()
 
         else:
             try:

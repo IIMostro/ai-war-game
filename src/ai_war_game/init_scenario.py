@@ -158,6 +158,15 @@ def persist_scenario(db_path: str, scenario_data: dict) -> dict:
         for fid, fname in factions.items():
             insert_faction(conn, fid.strip(), fname.strip())
 
+        # Bugfix: sync player_identity.id with the actual is_player general's ID
+        # LLM may generate different IDs for player_identity vs the general entry
+        for g in scenario_data.get("generals", []):
+            if g.get("is_player"):
+                actual_id = str(g.get("id", "")).strip()
+                if actual_id:
+                    scenario_data.setdefault("player_identity", {})["id"] = actual_id
+                break
+
         for city in scenario_data.get("cities", []):
             terrain = str(city.get("terrain", "平原")).strip()
             if terrain not in allowed_terrains:

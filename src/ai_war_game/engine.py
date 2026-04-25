@@ -68,8 +68,11 @@ def march_days(graph_path: str, from_city: str, to_city: str) -> int | None:
     for triple in graph:
         s, p, o = triple[0], triple[1], triple[2]
         meta = triple[3] if len(triple) > 3 else {}
-        if s == from_city and o == to_city and p == "connects":
-            return meta.get("distance")
+        if p == "connects":
+            if s == from_city and o == to_city:
+                return meta.get("distance")
+            if s == to_city and o == from_city:
+                return meta.get("distance")
     return None
 
 
@@ -145,25 +148,60 @@ def process_due_events(
     result: list[dict] = []
     for seq, event in enumerate(processed, start=1):
         day, priority, event_type, actor_id, target_id, details = event
-        log_event(
-            conn,
-            day,
-            seq,
-            event_type,
-            actor_id,
-            target_id,
-            json.dumps(details, ensure_ascii=False),
-        )
-        result.append(
-            {
-                "day": day,
-                "priority": priority,
-                "event_type": event_type,
-                "actor_id": actor_id,
-                "target_id": target_id,
-                "details": details,
-            }
-        )
+
+        if event_type == "battle":
+            # Resolve scheduled battle: move attacker to defender's city, then resolve
+            att_id = details.get("attacker_id", actor_id or "")
+            def_id = details.get("defender_id", target_id or "")
+            def_city = details.get("defender_city_id", "")
+
+            if def_city:
+                conn.execute(
+                    "UPDATE generals SET position_city_id=? WHERE id=?", (def_city, att_id)
+                )
+
+            from ai_war_game.battle import apply_battle_result as _apply
+            from ai_war_game.battle import resolve_battle as _resolve
+            from ai_war_game.battle import start_battle as _start_battle
+
+            try:
+                battle_data = _start_battle(conn, queue_path, graph_path, att_id, def_id, "")
+                battle_result = _resolve(battle_data)
+                battle_events = _apply(conn, battle_result)
+                for be in battle_events:
+                    be["priority"] = priority
+                    result.append(be)
+            except Exception as exc:
+                result.append(
+                    {
+                        "day": day,
+                        "priority": priority,
+                        "event_type": "battle_error",
+                        "actor_id": att_id,
+                        "target_id": def_id,
+                        "details": {"error": str(exc)},
+                    }
+                )
+        else:
+            log_event(
+                conn,
+                day,
+                seq,
+                event_type,
+                actor_id,
+                target_id,
+                json.dumps(details, ensure_ascii=False),
+            )
+            result.append(
+                {
+                    "day": day,
+                    "priority": priority,
+                    "event_type": event_type,
+                    "actor_id": actor_id,
+                    "target_id": target_id,
+                    "details": details,
+                }
+            )
 
     return result
 

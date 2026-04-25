@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 
-from ai_war_game.db import get_general
+from ai_war_game.db import get_general, read_graph
 
 
 def format_show(
@@ -129,10 +129,10 @@ def format_general(
     return lines
 
 
-def format_map(conn: sqlite3.Connection) -> list[str]:
+def format_map(conn: sqlite3.Connection, graph_path: str = "") -> list[str]:
     lines: list[str] = []
     cursor = conn.execute(
-        """SELECT c.name, c.x, c.y, c.terrain, COALESCE(f.name, '\u65e0\u4e3b')
+        """SELECT c.id, c.name, c.x, c.y, c.terrain, COALESCE(f.name, '\u65e0\u4e3b')
            FROM cities c
            LEFT JOIN factions f ON c.owner_faction_id = f.id
            ORDER BY c.name""",
@@ -142,11 +142,35 @@ def format_map(conn: sqlite3.Connection) -> list[str]:
         lines.append("(\u65e0\u57ce\u6c60)")
         return lines
 
+    connections: dict[str, list[tuple[str, int]]] = {}
+    if graph_path:
+        try:
+            graph = read_graph(graph_path)
+            for triple in graph:
+                s, p, o = triple[0], triple[1], triple[2]
+                meta = triple[3] if len(triple) > 3 else {}
+                if p == "connects":
+                    dist = meta.get("distance", "?")
+                    connections.setdefault(s, []).append((o, dist))
+                    connections.setdefault(o, []).append((s, dist))
+        except (FileNotFoundError, json.JSONDecodeError):
+            pass
+
     lines.append("\u3010\u5730\u56fe\u3011")
     lines.append("")
+
+    city_names: dict[str, str] = {row[0]: row[1] for row in rows}
+
     for row in rows:
-        name, x, y, terrain, owner = row
+        cid, name, x, y, terrain, owner = row
         lines.append(f"  {name}  ({x}, {y})  {terrain}  [{owner}]")
+        if cid in connections:
+            conn_lines = []
+            for neighbor_id, dist in connections[cid]:
+                nname = city_names.get(neighbor_id, neighbor_id)
+                conn_lines.append(f"    \u2502  {nname}  ({dist}\u65e5)")
+            if conn_lines:
+                lines.extend(conn_lines)
     return lines
 
 
