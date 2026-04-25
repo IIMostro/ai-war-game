@@ -37,9 +37,7 @@ def _handler(args: argparse.Namespace, *, save_root: Path) -> int:
     bin_path = os.environ.get(ENV_BIN, DEFAULT_BIN)
     model = os.environ.get(ENV_MODEL, "")
     config_path = os.environ.get(ENV_CONFIG, "")
-    generator = HermesScenarioGenerator(
-        bin_path=bin_path, model=model, config_path=config_path
-    )
+    generator = HermesScenarioGenerator(bin_path=bin_path, model=model, config_path=config_path)
     service = CreateGameService(
         hermes_health=health,
         scenario_generator=generator,
@@ -55,7 +53,6 @@ def _handler(args: argparse.Namespace, *, save_root: Path) -> int:
         )
     )
     sys.stdout.write(
-        f"已创建存档 {output.save_id} (第 {output.starting_day} 天)\n"
-        f"摘要: {output.summary}\n"
+        f"已创建存档 {output.save_id} (第 {output.starting_day} 天)\n摘要: {output.summary}\n"
     )
     return exit_codes.OK

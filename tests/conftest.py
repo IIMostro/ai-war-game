@@ -28,15 +28,14 @@ class FakeScenarioGenerator:
         self._payload = payload or _default_scenario_payload()
 
     def generate(self, *, theme: str, player_display_name: str) -> Scenario:
+        summary = f"{player_display_name} 加入 {theme} 战局。"
+        payload = {**self._payload, "summary": summary}
+        payload["player"] = {**payload["player"], "display_name": player_display_name}
         return Scenario(
             theme=theme,
-            summary=self._payload["summary"],
+            summary=summary,
             starting_day=int(self._payload["starting_day"]),
-            raw_payload={
-                **self._payload,
-                "_input_theme": theme,
-                "_player": player_display_name,
-            },
+            raw_payload=payload,
         )
 
 
@@ -69,12 +68,8 @@ def _default_scenario_payload() -> dict[str, Any]:
         "summary": "群雄逐鹿，蜀汉初立。",  # noqa: RUF001
         "starting_day": 1,
         "player": {"display_name": "刘备", "faction_id": "shu"},
-        "factions": [
-            {"faction_id": "shu", "name": "蜀汉", "leader_character_id": "liubei"}
-        ],
-        "characters": [
-            {"character_id": "liubei", "name": "刘备", "faction_id": "shu"}
-        ],
+        "factions": [{"faction_id": "shu", "name": "蜀汉", "leader_character_id": "liubei"}],
+        "characters": [{"character_id": "liubei", "name": "刘备", "faction_id": "shu"}],
         "settlements": [
             {"settlement_id": "chengdu", "name": "成都", "controlling_faction_id": "shu"}
         ],

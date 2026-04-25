@@ -60,8 +60,7 @@ class HermesScenarioGenerator:
         outcome = self.runner(argv=argv, stdin=prompt, timeout=self.timeout_seconds)
         if outcome.returncode != 0:
             raise ScenarioGenerationError(
-                f"hermes 退出码 {outcome.returncode}: "
-                f"{outcome.stderr.strip() or '(无 stderr)'}"
+                f"hermes 退出码 {outcome.returncode}: {outcome.stderr.strip() or '(无 stderr)'}"
             )
         try:
             payload = json.loads(outcome.stdout)

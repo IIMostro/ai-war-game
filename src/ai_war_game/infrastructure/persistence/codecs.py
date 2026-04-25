@@ -76,9 +76,7 @@ def encode_session(session: GameSession) -> dict[str, Any]:
 def decode_session(payload: dict[str, Any]) -> GameSession:
     version = payload.get("schema_version")
     if version != SCHEMA_VERSION:
-        raise SaveCorruptedError(
-            f"不支持的 schema_version={version} (期望 {SCHEMA_VERSION})"
-        )
+        raise SaveCorruptedError(f"不支持的 schema_version={version} (期望 {SCHEMA_VERSION})")
     return GameSession(
         save_id=payload["save_id"],
         created_at=datetime.fromisoformat(payload["created_at"]),

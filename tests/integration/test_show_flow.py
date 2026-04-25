@@ -9,12 +9,17 @@ def test_should_show_existing_save(tmp_path, monkeypatch, capsys):
     save_root = tmp_path / "saves"
     run(
         argv=[
-            "--save-root", str(save_root),
+            "--save-root",
+            str(save_root),
             "new-game",
-            "--save-id", "save-1",
-            "--theme", "三国",
-            "--player-id", "p1",
-            "--player-name", "刘备",
+            "--save-id",
+            "save-1",
+            "--theme",
+            "三国",
+            "--player-id",
+            "p1",
+            "--player-name",
+            "刘备",
         ]
     )
     capsys.readouterr()

@@ -24,4 +24,3 @@ class SaveLocator:
         if not self.root.exists():
             return iter(())
         return (p.name for p in self.root.iterdir() if p.is_dir())
-

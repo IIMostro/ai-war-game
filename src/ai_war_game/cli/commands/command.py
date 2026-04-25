@@ -31,7 +31,5 @@ def _handler(args: argparse.Namespace, *, save_root: Path) -> int:
     )
     service = ExecuteCommandService(repository=repo)
     result = service.execute(envelope.to_command_request())
-    sys.stdout.write(
-        f"{result.message} (accepted={result.accepted}, 第 {result.new_day} 天)\n"
-    )
+    sys.stdout.write(f"{result.message} (accepted={result.accepted}, 第 {result.new_day} 天)\n")
     return exit_codes.OK

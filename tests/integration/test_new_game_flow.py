@@ -11,12 +11,8 @@ def _scenario_payload() -> str:
             "summary": "群雄逐鹿, 蜀汉初立.",
             "starting_day": 1,
             "player": {"display_name": "刘备", "faction_id": "shu"},
-            "factions": [
-                {"faction_id": "shu", "name": "蜀汉", "leader_character_id": "liubei"}
-            ],
-            "characters": [
-                {"character_id": "liubei", "name": "刘备", "faction_id": "shu"}
-            ],
+            "factions": [{"faction_id": "shu", "name": "蜀汉", "leader_character_id": "liubei"}],
+            "characters": [{"character_id": "liubei", "name": "刘备", "faction_id": "shu"}],
             "settlements": [
                 {"settlement_id": "chengdu", "name": "成都", "controlling_faction_id": "shu"}
             ],
@@ -45,12 +41,17 @@ def test_new_game_creates_save(tmp_path, monkeypatch, capsys):
     save_root = tmp_path / "saves"
     rc = run(
         argv=[
-            "--save-root", str(save_root),
+            "--save-root",
+            str(save_root),
             "new-game",
-            "--save-id", "save-1",
-            "--theme", "三国",
-            "--player-id", "p1",
-            "--player-name", "刘备",
+            "--save-id",
+            "save-1",
+            "--theme",
+            "三国",
+            "--player-id",
+            "p1",
+            "--player-name",
+            "刘备",
         ]
     )
     assert rc == exit_codes.OK
@@ -67,12 +68,17 @@ def test_new_game_fails_when_hermes_missing(tmp_path, monkeypatch, capsys):
     save_root = tmp_path / "saves"
     rc = run(
         argv=[
-            "--save-root", str(save_root),
+            "--save-root",
+            str(save_root),
             "new-game",
-            "--save-id", "save-1",
-            "--theme", "三国",
-            "--player-id", "p1",
-            "--player-name", "刘备",
+            "--save-id",
+            "save-1",
+            "--theme",
+            "三国",
+            "--player-id",
+            "p1",
+            "--player-name",
+            "刘备",
         ]
     )
     assert rc == exit_codes.HERMES_UNAVAILABLE

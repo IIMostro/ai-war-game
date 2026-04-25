@@ -46,4 +46,3 @@ def test_should_create_root_directory(tmp_path: Path):
     locator.ensure_root()
 
     assert root.is_dir()
-

@@ -24,4 +24,3 @@ def render_prompt(*, theme: str, player_display_name: str) -> str:
         theme=json.dumps(theme, ensure_ascii=False)[1:-1],
         player_display_name=json.dumps(player_display_name, ensure_ascii=False)[1:-1],
     )
-

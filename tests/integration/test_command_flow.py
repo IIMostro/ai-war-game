@@ -11,22 +11,31 @@ def test_should_advance_day_and_persist(tmp_path, monkeypatch, capsys):
     save_root = tmp_path / "saves"
     run(
         argv=[
-            "--save-root", str(save_root),
+            "--save-root",
+            str(save_root),
             "new-game",
-            "--save-id", "save-1",
-            "--theme", "三国",
-            "--player-id", "p1",
-            "--player-name", "刘备",
+            "--save-id",
+            "save-1",
+            "--theme",
+            "三国",
+            "--player-id",
+            "p1",
+            "--player-name",
+            "刘备",
         ]
     )
     capsys.readouterr()
     rc = run(
         argv=[
-            "--save-root", str(save_root),
+            "--save-root",
+            str(save_root),
             "command",
-            "--save-id", "save-1",
-            "--player-id", "p1",
-            "--text", "进军洛阳",
+            "--save-id",
+            "save-1",
+            "--player-id",
+            "p1",
+            "--text",
+            "进军洛阳",
         ]
     )
     assert rc == exit_codes.OK
@@ -44,11 +53,15 @@ def test_should_return_error_when_save_missing(tmp_path):
     save_root = tmp_path / "saves"
     rc = run(
         argv=[
-            "--save-root", str(save_root),
+            "--save-root",
+            str(save_root),
             "command",
-            "--save-id", "missing",
-            "--player-id", "p1",
-            "--text", "x",
+            "--save-id",
+            "missing",
+            "--player-id",
+            "p1",
+            "--text",
+            "x",
         ]
     )
     assert rc == exit_codes.SAVE_NOT_FOUND

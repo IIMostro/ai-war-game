@@ -10,12 +10,17 @@ def test_should_list_existing_saves(tmp_path, monkeypatch, capsys):
     for sid in ("save-a", "save-b"):
         run(
             argv=[
-                "--save-root", str(save_root),
+                "--save-root",
+                str(save_root),
                 "new-game",
-                "--save-id", sid,
-                "--theme", "三国",
-                "--player-id", "p1",
-                "--player-name", "刘备",
+                "--save-id",
+                sid,
+                "--theme",
+                "三国",
+                "--player-id",
+                "p1",
+                "--player-name",
+                "刘备",
             ]
         )
     capsys.readouterr()
