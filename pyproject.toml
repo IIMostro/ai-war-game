@@ -6,12 +6,8 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
 
-[project.scripts]
-ai-war-game = "ai_war_game.cli.app:run"
-
 [dependency-groups]
 dev = [
-    "pip-audit>=2.10.0",
     "pytest>=9.0.3",
     "ruff>=0.15.11",
 ]
@@ -26,12 +22,12 @@ packages = ["src/ai_war_game"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
-pythonpath = ["src"]
+pythonpath = ["src", "hermes-skill/lib", "hermes-skill/scripts"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["src", "tests"]
+src = ["src", "tests", "hermes-skill/lib", "hermes-skill/scripts"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "RUF", "SIM"]
