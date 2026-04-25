@@ -5,10 +5,11 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+
+from llm_client import llm_chat
 
 HERMES_ROOT = os.path.join(os.path.expanduser("~"), ".hermes")
 OUTBOX_FILE = "outbox.json"
@@ -27,28 +28,24 @@ def send_to_inbox(general_id: str, context: str) -> None:
 def _process_general(general_id: str, timeout: int) -> dict:
     prof_dir = Path(general_profile_dir(general_id))
     inbox = prof_dir / "inbox.json"
+    soul_path = prof_dir / "SOUL.md"
 
     try:
-        context = inbox.read_text(encoding="utf-8")
+        user_message = inbox.read_text(encoding="utf-8")
     except FileNotFoundError:
         return {"general": general_id, "status": "error", "error": f"inbox 不存在: {inbox}"}
+
+    soul_content = ""
+    if soul_path.is_file():
+        soul_content = soul_path.read_text(encoding="utf-8")
+
     try:
-        result = subprocess.run(
-            ["hermes", "-p", general_id, "chat", "-q", context],
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            check=False,
-        )
-        response = result.stdout
-        (prof_dir / "outbox.json").write_text(response, encoding="utf-8")
-        return {"general": general_id, "response": response, "status": "ok"}
-    except FileNotFoundError:
-        return {"general": general_id, "status": "error", "error": "hermes binary not found"}
-    except subprocess.TimeoutExpired:
-        return {"general": general_id, "status": "timeout"}
+        response = llm_chat(system_prompt=soul_content, user_message=user_message)
     except Exception as e:
         return {"general": general_id, "status": "error", "error": str(e)}
+
+    (prof_dir / "outbox.json").write_text(response, encoding="utf-8")
+    return {"general": general_id, "response": response, "status": "ok"}
 
 
 def invoke_generals(general_ids: list[str], timeout: int = 120) -> list[dict]:

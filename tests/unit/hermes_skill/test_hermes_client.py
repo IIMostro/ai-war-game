@@ -7,7 +7,6 @@ import pytest
 
 from hermes_client import (
     HermesUnavailableError,
-    ScenarioGenerationError,
     ScenarioInvalidError,
     call_hermes,
     check_environment,
@@ -66,48 +65,22 @@ class TestCheckEnvironment:
 
 
 class TestCallHermes:
-    def test_returns_stdout_on_success(self, monkeypatch, tmp_path):
-        def fake_run(*args, **kwargs):
-            class Result:
-                returncode = 0
-                stdout = '{"summary": "test"}'
-                stderr = ""
+    def test_returns_stdout_on_success(self, monkeypatch):
+        def fake_chat(*, system_prompt, user_message, model=None):
+            return '{"summary": "test"}'
 
-            return Result()
-
-        hermes_bin = tmp_path / "hermes"
-        hermes_bin.write_text("#!/bin/sh\nexit 0\n")
-        hermes_bin.chmod(hermes_bin.stat().st_mode | stat.S_IXUSR)
-        config = tmp_path / "hermes.yaml"
-        config.write_text("model: demo\n")
-        monkeypatch.setattr("hermes_client.subprocess.run", fake_run)
-        monkeypatch.setenv("AI_WAR_GAME_HERMES_BIN", str(hermes_bin))
-        monkeypatch.setenv("AI_WAR_GAME_HERMES_MODEL", "test-model")
-        monkeypatch.setenv("AI_WAR_GAME_HERMES_CONFIG", str(config))
+        monkeypatch.setattr("hermes_client.llm_chat", fake_chat)
 
         result = call_hermes("hello")
         assert result == '{"summary": "test"}'
 
-    def test_raises_on_nonzero_exit(self, monkeypatch, tmp_path):
-        def fake_run(*args, **kwargs):
-            class Result:
-                returncode = 1
-                stdout = ""
-                stderr = "error msg"
+    def test_raises_on_error(self, monkeypatch):
+        def fake_chat(*, system_prompt, user_message, model=None):
+            raise RuntimeError("LLM error")
 
-            return Result()
+        monkeypatch.setattr("hermes_client.llm_chat", fake_chat)
 
-        hermes_bin = tmp_path / "hermes"
-        hermes_bin.write_text("#!/bin/sh\nexit 0\n")
-        hermes_bin.chmod(hermes_bin.stat().st_mode | stat.S_IXUSR)
-        config = tmp_path / "hermes.yaml"
-        config.write_text("model: demo\n")
-        monkeypatch.setattr("hermes_client.subprocess.run", fake_run)
-        monkeypatch.setenv("AI_WAR_GAME_HERMES_BIN", str(hermes_bin))
-        monkeypatch.setenv("AI_WAR_GAME_HERMES_MODEL", "test-model")
-        monkeypatch.setenv("AI_WAR_GAME_HERMES_CONFIG", str(config))
-
-        with pytest.raises(ScenarioGenerationError, match="error msg"):
+        with pytest.raises(RuntimeError, match="LLM error"):
             call_hermes("hello")
 
     def test_parses_valid_json(self):

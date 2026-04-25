@@ -49,15 +49,10 @@ class TestInvokeGenerals:
         prof_dir.mkdir(parents=True)
         (prof_dir / "inbox.json").write_text(json.dumps({"q": "test"}), encoding="utf-8")
 
-        def fake_run(*args, **kwargs):
-            class Result:
-                returncode = 0
-                stdout = '{"action": "fight", "effort": 0.9}'
-                stderr = ""
+        def fake_chat(*, system_prompt, user_message, model=None):
+            return '{"action": "fight", "effort": 0.9}'
 
-            return Result()
-
-        monkeypatch.setattr("agent_comm.subprocess.run", fake_run)
+        monkeypatch.setattr("agent_comm.llm_chat", fake_chat)
 
         results = invoke_generals(["caocao"], timeout=10)
         assert results[0]["status"] == "ok"

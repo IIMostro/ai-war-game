@@ -176,15 +176,11 @@ class TestReflectFlow:
             (p / "inbox.json").write_text("{}")
 
         call_count = [0]
-        def fake_run(*args, **kwargs):
+        def fake_chat(*, system_prompt, user_message, model=None):
             call_count[0] += 1
-            class Result:
-                returncode = 0
-                stdout = '{"action": "reflect", "status": "ok"}'
-                stderr = ""
-            return Result()
+            return '{"action": "reflect", "status": "ok"}'
 
-        monkeypatch.setattr("agent_comm.subprocess.run", fake_run)
+        monkeypatch.setattr("agent_comm.llm_chat", fake_chat)
         from agent_comm import reflect
         results = reflect(["caocao", "liubei"], "a great battle occurred")
         assert len(results) == 2
@@ -192,13 +188,10 @@ class TestReflectFlow:
     def test_reflect_writes_event_to_inbox(self, tmp_path, monkeypatch):
         monkeypatch.setattr("agent_comm.HERMES_ROOT", str(tmp_path / ".hermes"))
 
-        def fake_run(*args, **kwargs):
-            class Result:
-                returncode = 0
-                stdout = "ok"
-                stderr = ""
-            return Result()
-        monkeypatch.setattr("agent_comm.subprocess.run", fake_run)
+        def fake_chat(*, system_prompt, user_message, model=None):
+            return "ok"
+
+        monkeypatch.setattr("agent_comm.llm_chat", fake_chat)
 
         for gid in ["caocao"]:
             p = tmp_path / ".hermes" / "profiles" / gid
