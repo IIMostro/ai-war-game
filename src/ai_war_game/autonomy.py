@@ -6,7 +6,7 @@ import contextlib
 import json
 import sqlite3
 
-from ai_war_game.db import get_general, get_memories
+from ai_war_game.db import add_memory, get_general, get_memories, log_event
 from ai_war_game.llm import get_decision_model, llm_call_json
 
 
@@ -107,6 +107,20 @@ def trigger_autonomy(conn: sqlite3.Connection, general_id: str) -> dict:
     }
 
     decision = general_decide(general, context, memory_text)
+    action = decision.get("action", "idle")
+    narrative = decision.get("narrative", "")
+
+    add_memory(
+        conn, general_id, current_day, f"autonomy_{action}",
+        f"{general['name']}决定{action}: {narrative[:100]}",
+    )
+    log_event(
+        conn, current_day, 0, f"autonomy_{action}",
+        general_id, None,
+        json.dumps({"name": general["name"], "action": action,
+                     "narrative": narrative[:200]}, ensure_ascii=False),
+    )
+
     return {"general": general_id, "name": general["name"], "decision": decision}
 
 

@@ -271,7 +271,32 @@ def run_cli(argv: list[str] | None = None) -> int:
                         parts_str.append(f"{critical_count} 个粮草危急")
                     print(f"  {'，'.join(parts_str)}")
 
-                trigger_all_autonomy(conn)
+                autonomy_results = trigger_all_autonomy(conn)
+                if autonomy_results:
+                    print("\n  ── 武将动向 ──")
+                    for r in autonomy_results:
+                        name = r.get("name", r.get("general", "?"))
+                        decision = r.get("decision", {})
+                        action = decision.get("action", "idle")
+                        narrative = decision.get("narrative", "")
+                        effort = decision.get("effort", 0)
+                        ai_actions = {
+                            "idle": "按兵不动",
+                            "fight": "准备出战",
+                            "retreat": "准备撤退",
+                            "negotiate": "寻求交涉",
+                            "rebel": "图谋不轨!!",
+                            "advise": "有所建言",
+                            "train": "操练兵马",
+                            "recruit": "招募兵勇",
+                            "fortify": "修筑城防",
+                        }
+                        action_label = ai_actions.get(action, action)
+                        effort_bar = "█" * int(effort * 10) + "░" * (10 - int(effort * 10))
+                        print(f"  {name}: {action_label} [{effort_bar}]")
+                        if narrative and len(narrative) < 80:
+                            print(f"          {narrative}")
+                    print()
             finally:
                 conn.close()
 
