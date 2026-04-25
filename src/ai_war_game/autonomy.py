@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import sqlite3
 
-from ai_war_game.db import add_memory, get_general, get_memories
+from ai_war_game.db import get_general, get_memories
 from ai_war_game.llm import llm_call_json
 
 
@@ -13,14 +14,12 @@ def _build_personality_prompt(general: dict, memory_summary: str) -> str:
     """Build system prompt from general's personality JSON (equivalent to SOUL.md)."""
     name = general["name"]
     personality: dict = {}
-    try:
+    with contextlib.suppress(json.JSONDecodeError, TypeError):
         personality = (
             json.loads(general["personality"])
             if isinstance(general["personality"], str)
             else general["personality"]
         )
-    except (json.JSONDecodeError, TypeError):
-        pass
 
     lines = [f"你 是{name}，一位三国时代的武将。"]
     if personality.get("temperament"):
@@ -36,7 +35,7 @@ def _build_personality_prompt(general: dict, memory_summary: str) -> str:
     if personality.get("enemy_attitude"):
         lines.append(f"对敌人: {personality['enemy_attitude']}")
 
-    lines.append(f"\n数值:")
+    lines.append("\n数值:")
     lines.append(f"  武力: {general['war']}  统帅: {general['cmd']}  智力: {general['intel']}")
     lines.append(f"  政治: {general['politics']}  魅力: {general['charm']}")
     if general.get("loyalty") is not None:
@@ -54,7 +53,8 @@ def _build_personality_prompt(general: dict, memory_summary: str) -> str:
 - 根据局势和自身状态选择行动
 
 输出格式: 严格JSON
-{"action": "fight|retreat|negotiate|idle|rebel|advise|...", "effort": 0.0-1.0, "target": "...", "narrative": "..."}
+{"action": "fight|retreat|negotiate|idle|rebel|advise|...",
+ "effort": 0.0-1.0, "target": "...", "narrative": "..."}
 """)
     return "\n".join(lines)
 
@@ -86,8 +86,7 @@ def trigger_autonomy(conn: sqlite3.Connection, general_id: str) -> dict:
 
     recent_memories = get_memories(conn, general_id, limit=5)
     memory_text = "\n".join(
-        f"第{m['game_day']}日 [{m['event_type']}] {m['summary']}"
-        for m in recent_memories
+        f"第{m['game_day']}日 [{m['event_type']}] {m['summary']}" for m in recent_memories
     )
 
     context = {
@@ -99,7 +98,10 @@ def trigger_autonomy(conn: sqlite3.Connection, general_id: str) -> dict:
             "food": general["food"],
             "loyalty": general["loyalty"],
         },
-        "instruction": "Review your situation and decide what action to take. Consider your loyalty, troops, food supplies, and ambitions.",
+        "instruction": (
+            "Review your situation and decide what action to take. "
+            "Consider your loyalty, troops, food supplies, and ambitions."
+        ),
     }
 
     decision = general_decide(general, context, memory_text)

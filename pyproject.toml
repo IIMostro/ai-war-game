@@ -34,4 +34,5 @@ select = ["E", "F", "I", "B", "UP", "RUF", "SIM"]
 ignore = []
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["B011"]
+"tests/**" = ["B011", "SIM117"]
+"src/ai_war_game/*.py" = ["RUF001"]  # Chinese punctuation intentional in game text

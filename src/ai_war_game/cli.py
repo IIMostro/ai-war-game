@@ -89,9 +89,7 @@ def run_cli(argv: list[str] | None = None) -> int:
         elif cmd in ("status", "查看局势"):
             conn = sqlite3.connect(db_path)
             try:
-                cursor = conn.execute(
-                    "SELECT value FROM game_state WHERE key='player_identity'"
-                )
+                cursor = conn.execute("SELECT value FROM game_state WHERE key='player_identity'")
                 row = cursor.fetchone()
                 if not row:
                     print("错误: 未找到玩家身份。先创建新局: new-game --theme ... --player ...")

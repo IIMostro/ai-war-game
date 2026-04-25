@@ -1,13 +1,14 @@
-"""tests/unit/hermes_skill/test_time_engine.py"""
+"""tests/unit/test_time_engine.py"""
+
+from __future__ import annotations
 
 import json
 import sqlite3
-import subprocess
 
 import pytest
 
-from db import create_schema, insert_city, insert_faction, insert_general, upsert_state
-from time_engine import (
+from ai_war_game.db import create_schema, insert_city, insert_faction, insert_general, upsert_state
+from ai_war_game.engine import (
     advance_time,
     calc_season,
     consume_food,
@@ -162,17 +163,17 @@ class TestFood:
         q_file.write_text("[]", encoding="utf-8")
         advance_time(conn, str(q_file), graph_with_connection, days=3)
         cursor = conn.execute("SELECT food FROM generals WHERE id='caocao'")
-        assert cursor.fetchone()[0] == 12  # 15 - 3
+        assert cursor.fetchone()[0] == 12
 
     def test_food_warning_general(self, conn):
         events = run_daily_checks(conn, 5)
-        food_warnings = [e for e in events if e["event_type"] == "food_warning"]
-        assert len(food_warnings) >= 1
+        warnings = [e for e in events if e["event_type"] == "food_warning"]
+        assert len(warnings) >= 1
 
     def test_consume_food_specific(self, conn):
         consume_food(conn, "caocao", 5)
         cursor = conn.execute("SELECT food FROM generals WHERE id='caocao'")
-        assert cursor.fetchone()[0] == 10  # 15 - 5
+        assert cursor.fetchone()[0] == 10
 
 
 class TestMarchDays:
@@ -183,26 +184,6 @@ class TestMarchDays:
     def test_returns_none_for_no_connection(self, graph_with_connection):
         days = march_days(graph_with_connection, "luoyang", "nonexistent")
         assert days is None
-
-
-class TestCLI:
-    def test_march_days_via_main(self, graph_with_connection, tmp_path, monkeypatch):
-        db_path = tmp_path / "test.db"
-        monkeypatch.setattr("time_engine.get_db_path", lambda *args: str(db_path))
-        monkeypatch.setattr("time_engine.get_graph_path", lambda *args: str(graph_with_connection))
-        conn = sqlite3.connect(str(db_path))
-        create_schema(conn)
-        conn.close()
-        result = subprocess.run(
-            ["python3", "hermes-skill/scripts/time_engine.py", "march-days",
-             "--from", "luoyang", "--to", "yingchuan",
-             "--db-path", str(db_path)],
-            capture_output=True, text=True,
-        )
-        assert result.returncode == 0
-        import json
-        data = json.loads(result.stdout)
-        assert data["days"] == 5
 
 
 class TestProcessDueEvents:

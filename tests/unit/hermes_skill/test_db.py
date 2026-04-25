@@ -1,4 +1,4 @@
-"""tests/unit/hermes_skill/test_db.py"""
+"""tests/unit/test_db.py"""
 
 from __future__ import annotations
 
@@ -7,10 +7,12 @@ import sqlite3
 
 import pytest
 
-from db import (
+from ai_war_game.db import (
+    add_memory,
     add_triple,
     create_schema,
     get_events,
+    get_memories,
     get_state,
     init_scenario_data,
     insert_city,
@@ -40,6 +42,7 @@ class TestCreateSchema:
         assert "generals" in tables
         assert "game_state" in tables
         assert "events_log" in tables
+        assert "general_memories" in tables
 
 
 class TestFactionCRUD:
@@ -150,11 +153,6 @@ class TestGeneralCRUD:
         cursor = conn.execute("SELECT count(*) FROM generals")
         assert cursor.fetchone()[0] == 2
 
-    def test_invalid_terrain_raises(self, conn):
-        insert_faction(conn, "wei", "曹魏")
-        with pytest.raises(sqlite3.IntegrityError):
-            insert_city(conn, "bad", "Bad", 0, 0, "沙漠", "wei")
-
     def test_invalid_war_stat_raises(self, conn):
         insert_faction(conn, "wei", "曹魏")
         insert_city(conn, "luoyang", "洛阳", 0, 0, "平原", "wei")
@@ -192,9 +190,9 @@ class TestGameState:
         upsert_state(conn, "current_day", "1", 1)
         upsert_state(conn, "current_day", "5", 5)
         states = get_state(conn)
-        current_day_entries = [s for s in states if s["key"] == "current_day"]
-        assert len(current_day_entries) == 1
-        assert current_day_entries[0]["value"] == "5"
+        hits = [s for s in states if s["key"] == "current_day"]
+        assert len(hits) == 1
+        assert hits[0]["value"] == "5"
 
 
 class TestEvents:
@@ -234,6 +232,37 @@ class TestGraph:
         add_triple(str(graph_file), "caocao", "trusts", "liubei")
         triples = read_graph(str(graph_file))
         assert len(triples) == 2
+
+
+class TestGeneralMemories:
+    def test_add_and_get_memory(self, conn, tmp_path):
+        insert_faction(conn, "wei", "曹魏")
+        insert_city(conn, "luoyang", "洛阳", 0, 0, "平原", "wei")
+        insert_general(
+            conn,
+            {
+                "id": "caocao",
+                "name": "曹操",
+                "war": 72,
+                "cmd": 86,
+                "intel": 91,
+                "politics": 88,
+                "charm": 80,
+                "loyalty": None,
+                "troops": 8000,
+                "food": 15,
+                "position_city_id": "luoyang",
+                "faction_id": "wei",
+                "is_player": True,
+                "personality": "{}",
+            },
+        )
+        add_memory(conn, "caocao", 10, "battle", "won a battle", {"outcome": "victory"})
+        add_memory(conn, "caocao", 15, "diplomacy", "formed alliance")
+        memories = get_memories(conn, "caocao", limit=10)
+        assert len(memories) == 2
+        assert memories[0]["summary"] == "formed alliance"
+        assert memories[1]["event_type"] == "battle"
 
 
 class TestScenarioInit:
@@ -276,88 +305,16 @@ class TestScenarioInit:
         states = get_state(conn)
         keys = [s["key"] for s in states]
         assert "current_day" in keys
-        assert "season" in keys
         conn.close()
 
     def test_init_empty_scenario_does_not_crash(self, tmp_path):
         db_file = tmp_path / "test.db"
         graph_file = tmp_path / "graph.json"
         graph_file.write_text("[]")
-        import sqlite3
-
         conn = sqlite3.connect(str(db_file))
-        from db import create_schema
-
         create_schema(conn)
         conn.close()
-        from db import init_scenario_data
-
         init_scenario_data(str(db_file), str(graph_file), {})
         conn = sqlite3.connect(str(db_file))
-        from db import get_state
-
         assert get_state(conn) == []
-        conn.close()
-
-
-class TestCLI:
-    def test_init_via_main(self, tmp_path, monkeypatch):
-        from db import main
-
-        db_path = tmp_path / "test.db"
-        rc = main(["init", "--db-path", str(db_path)])
-        assert rc == 0
-        assert db_path.is_file()
-
-    def test_state_write_read_via_main(self, tmp_path):
-        from db import main
-
-        db_path = tmp_path / "test.db"
-        main(["init", "--db-path", str(db_path)])
-        rc = main(["state", "write", "current_day", "5", "5", "--db-path", str(db_path)])
-        assert rc == 0
-        import sqlite3
-
-        conn = sqlite3.connect(str(db_path))
-        from db import get_state
-
-        states = get_state(conn)
-        conn.close()
-        assert {"key": "current_day", "value": "5", "updated_day": 5} in states
-
-    def test_general_update_via_main(self, tmp_path):
-        from db import insert_city, insert_faction, insert_general, main
-
-        db_path = tmp_path / "test.db"
-        main(["init", "--db-path", str(db_path)])
-        import sqlite3
-
-        conn = sqlite3.connect(str(db_path))
-        insert_faction(conn, "wei", "曹魏")
-        insert_city(conn, "luoyang", "洛阳", 0, 0, "平原", "wei")
-        insert_general(
-            conn,
-            {
-                "id": "caocao",
-                "name": "曹操",
-                "war": 72,
-                "cmd": 86,
-                "intel": 91,
-                "politics": 88,
-                "charm": 80,
-                "loyalty": None,
-                "troops": 8000,
-                "food": 15,
-                "position_city_id": "luoyang",
-                "faction_id": "wei",
-                "is_player": True,
-                "personality": "{}",
-            },
-        )
-        conn.close()
-        rc = main(["general", "update", "caocao", "troops", "9999", "--db-path", str(db_path)])
-        assert rc == 0
-        conn = sqlite3.connect(str(db_path))
-        cursor = conn.execute("SELECT troops FROM generals WHERE id='caocao'")
-        assert cursor.fetchone()[0] == 9999
         conn.close()

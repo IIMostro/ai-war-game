@@ -10,6 +10,7 @@ from typing import Any
 try:
     import litellm  # type: ignore
 except Exception:  # pragma: no cover - fallback for test environments without litellm
+
     class _LitellmStub:
         def __init__(self):
             self.completion = None  # type: ignore
@@ -93,7 +94,7 @@ def llm_call_json(
         enhanced_prompt += "\n\nRespond with valid JSON only, no other text."
 
     last_error = None
-    for attempt in range(MAX_RETRIES):
+    for _attempt in range(MAX_RETRIES):
         try:
             raw = llm_call(system_prompt=enhanced_prompt, user_message=user_message, **kwargs)
             # Strip markdown code fences if present
@@ -109,6 +110,4 @@ def llm_call_json(
             last_error = e
             continue
 
-    raise LLMResponseError(
-        f"Failed to get valid JSON after {MAX_RETRIES} attempts: {last_error}"
-    )
+    raise LLMResponseError(f"Failed to get valid JSON after {MAX_RETRIES} attempts: {last_error}")

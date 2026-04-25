@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import json
 from unittest.mock import patch
 
 import pytest
+
 from ai_war_game.llm import (
-    LLMConfigError,
     LLMResponseError,
     llm_call,
     llm_call_json,
@@ -28,6 +27,7 @@ class MockResponse:
 def _mock_completion(content: str):
     def mock(*args, **kwargs):
         return MockResponse(content)
+
     return mock
 
 
@@ -58,17 +58,21 @@ class TestLlmCallJson:
         assert result == {"key": "val"}
 
     def test_retries_on_invalid_json(self):
-        with patch(
-            "ai_war_game.llm.litellm.completion",
-            _mock_completion("not-json"),
+        with (
+            patch(
+                "ai_war_game.llm.litellm.completion",
+                _mock_completion("not-json"),
+            ),
+            pytest.raises(LLMResponseError),
         ):
-            with pytest.raises(LLMResponseError):
-                llm_call_json("sys", "user", model="test/model")
+            llm_call_json("sys", "user", model="test/model")
 
     def test_raises_on_json_array(self):
-        with patch(
-            "ai_war_game.llm.litellm.completion",
-            _mock_completion("[1, 2, 3]"),
+        with (
+            patch(
+                "ai_war_game.llm.litellm.completion",
+                _mock_completion("[1, 2, 3]"),
+            ),
+            pytest.raises(LLMResponseError),
         ):
-            with pytest.raises(LLMResponseError):
-                llm_call_json("sys", "user", model="test/model")
+            llm_call_json("sys", "user", model="test/model")

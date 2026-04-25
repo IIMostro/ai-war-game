@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
-from pathlib import Path
 
 from ai_war_game.db import (
     add_triple,
@@ -18,7 +17,7 @@ from ai_war_game.db import (
     log_event,
     upsert_state,
 )
-from ai_war_game.llm import LLMError, llm_call_json
+from ai_war_game.llm import llm_call_json
 
 SCHEMA_HINT = json.dumps(
     {
@@ -61,9 +60,7 @@ SCHEMA_HINT = json.dumps(
                 },
             }
         ],
-        "relationships": [
-            {"subject": "str", "predicate": "str", "object": "str", "metadata": {}}
-        ],
+        "relationships": [{"subject": "str", "predicate": "str", "object": "str", "metadata": {}}],
         "initial_state": {"day": "int", "season": "str", "weather": "str"},
     },
     ensure_ascii=False,
@@ -215,9 +212,7 @@ def persist_scenario(db_path: str, scenario_data: dict) -> dict:
     }
 
 
-def init_scenario(
-    theme: str, player_name: str, db_path: str | None = None
-) -> dict:
+def init_scenario(theme: str, player_name: str, db_path: str | None = None) -> dict:
     """Generate and persist a new game scenario in one call."""
     scenario_data = generate_scenario(theme, player_name)
     resolved_db = db_path or get_db_path(None)

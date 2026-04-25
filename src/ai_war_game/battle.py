@@ -2,14 +2,10 @@
 
 from __future__ import annotations
 
-import argparse
 import json
-import os
 import sqlite3
-import sys
 
 from ai_war_game.autonomy import general_decide
-from ai_war_game.db import get_db_path
 
 
 def _get_general(conn: sqlite3.Connection, general_id: str) -> dict | None:

@@ -9,7 +9,7 @@ import random
 import sqlite3
 from pathlib import Path
 
-from ai_war_game.db import get_graph_path, log_event, read_graph, upsert_state
+from ai_war_game.db import log_event, read_graph, upsert_state
 
 
 def get_event_queue_path(db_path: str) -> str:

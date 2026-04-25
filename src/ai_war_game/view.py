@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 
-from ai_war_game.db import get_db_path, get_events, get_general
+from ai_war_game.db import get_general
 
 
 def format_show(
@@ -46,7 +46,9 @@ def format_show(
             cursor2 = conn.execute("SELECT name FROM cities WHERE id=?", (city,))
             city_row = cursor2.fetchone()
             city_name = city_row[0] if city_row else city
-            lines.append(f"  {name}  \u5175 {troops} \u00b7 \u7cae {food} \u65e5 \u00b7 {city_name}")
+            lines.append(
+                f"  {name}  \u5175 {troops} \u00b7 \u7cae {food} \u65e5 \u00b7 {city_name}"
+            )
         lines.append("")
 
     cursor = conn.execute(
