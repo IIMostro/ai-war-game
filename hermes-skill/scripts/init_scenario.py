@@ -90,6 +90,13 @@ def validate_scenario(data: dict) -> None:
                 f"武将 {g['id']} 的 food {food} 超出范围 1-365"
             )
 
+        if not g.get("is_player"):
+            loy = g.get("loyalty")
+            if loy is not None and (not isinstance(loy, int) or loy < 1 or loy > 100):
+                raise ScenarioInitError(
+                    f"武将 {g['id']} 的 loyalty={loy} 必须为 null 或 1-100"
+                )
+
     for conn in connections:
         from_id = conn.get("from")
         to_id = conn.get("to")

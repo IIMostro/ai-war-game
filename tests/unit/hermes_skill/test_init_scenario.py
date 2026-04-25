@@ -125,6 +125,12 @@ class TestValidateScenario:
         with pytest.raises(ScenarioInitError, match="troops"):
             validate_scenario(data)
 
+    def test_raises_when_ai_loyalty_out_of_range(self):
+        data = _valid_scenario()
+        data["generals"][1]["loyalty"] = 999
+        with pytest.raises(ScenarioInitError, match="loyalty"):
+            validate_scenario(data)
+
 
 class TestBuildPrompt:
     def test_renders_theme_and_player(self):
