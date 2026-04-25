@@ -22,7 +22,7 @@ ai-war-game = "ai_war_game.__main__:main"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
-pythonpath = ["src", "hermes-skill/lib", "hermes-skill/scripts"]
+pythonpath = ["src"]
 
 [tool.ruff]
 line-length = 100
