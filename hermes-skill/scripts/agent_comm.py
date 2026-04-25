@@ -75,6 +75,22 @@ def collect_responses(general_ids: list[str]) -> list[dict]:
     return results
 
 
+def reflect(general_ids: list[str], event_description: str, timeout: int = 120) -> list[dict]:
+    """Send event results to generals for memory reflection.
+
+    Writes event summary to each general's inbox as a "memory" type context,
+    then invokes them to process it (updating MEMORY.md via Hermes chat).
+    Returns invoke results.
+    """
+    for gid in general_ids:
+        context = json.dumps({
+            "type": "memory_reflection",
+            "event": event_description,
+        }, ensure_ascii=False)
+        send_to_inbox(gid, context)
+    return invoke_generals(general_ids, timeout=timeout)
+
+
 def get_status() -> list[dict]:
     profiles_dir = Path(HERMES_ROOT) / "profiles"
     if not profiles_dir.is_dir():
@@ -113,6 +129,11 @@ def main(argv: list[str] | None = None) -> int:
     collect_p = sub.add_parser("collect", help="Collect responses from generals")
     collect_p.add_argument("--generals", required=True, help="Comma-separated general IDs")
 
+    p_reflect = sub.add_parser("reflect", help="Send event to generals for memory reflection")
+    p_reflect.add_argument("--generals", required=True)
+    p_reflect.add_argument("--event", required=True)
+    p_reflect.add_argument("--timeout", type=int, default=120)
+
     sub.add_parser("status", help="Show status of all general profiles")
 
     args = parser.parse_args(argv)
@@ -128,6 +149,10 @@ def main(argv: list[str] | None = None) -> int:
         gids = [g.strip() for g in args.generals.split(",") if g.strip()]
         results = collect_responses(gids)
         print(json.dumps(results, ensure_ascii=False, indent=2))
+    elif args.command == "reflect":
+        gids = [g.strip() for g in args.generals.split(",") if g.strip()]
+        results = reflect(gids, args.event, timeout=args.timeout)
+        print(json.dumps(results, ensure_ascii=False, default=str))
     elif args.command == "status":
         results = get_status()
         print(json.dumps(results, ensure_ascii=False, indent=2))
