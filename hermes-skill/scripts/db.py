@@ -150,6 +150,15 @@ def log_event(
     conn.commit()
 
 
+def get_general(conn: sqlite3.Connection, general_id: str) -> dict | None:
+    cursor = conn.execute("SELECT * FROM generals WHERE id=?", (general_id,))
+    row = cursor.fetchone()
+    if row is None:
+        return None
+    columns = [desc[0] for desc in cursor.description]
+    return dict(zip(columns, row, strict=False))
+
+
 def get_events(conn: sqlite3.Connection, limit: int = 10) -> list[dict]:
     cursor = conn.execute(
         """SELECT game_day, seq, event_type, actor_id, target_id, details_json
