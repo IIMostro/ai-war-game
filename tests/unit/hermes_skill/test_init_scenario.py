@@ -131,6 +131,24 @@ class TestValidateScenario:
         with pytest.raises(ScenarioInitError, match="loyalty"):
             validate_scenario(data)
 
+    def test_raises_when_city_missing_field(self):
+        data = _valid_scenario()
+        del data["cities"][0]["name"]
+        with pytest.raises(ScenarioInitError, match="缺少字段"):
+            validate_scenario(data)
+
+    def test_raises_when_general_missing_field(self):
+        data = _valid_scenario()
+        del data["generals"][0]["war"]
+        with pytest.raises(ScenarioInitError, match="缺少字段"):
+            validate_scenario(data)
+
+    def test_raises_when_duplicate_city_id(self):
+        data = _valid_scenario()
+        data["cities"].append(data["cities"][0])
+        with pytest.raises(ScenarioInitError, match="重复"):
+            validate_scenario(data)
+
 
 class TestBuildPrompt:
     def test_renders_theme_and_player(self):

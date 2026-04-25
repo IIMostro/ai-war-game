@@ -26,6 +26,9 @@ from db import (  # noqa: E402
     upsert_state,
 )
 from hermes_client import (  # noqa: E402
+    HermesUnavailableError,
+    ScenarioGenerationError,
+    ScenarioInvalidError,
     call_hermes,
     check_environment,
     parse_json_response,
@@ -44,15 +47,40 @@ def validate_scenario(data: dict) -> None:
     generals = data.get("generals", [])
     connections = data.get("connections", [])
 
+    required_city_fields = {"id", "name", "x", "y", "terrain", "owner"}
+    for i, c in enumerate(cities):
+        missing = required_city_fields - set(c.keys())
+        if missing:
+            raise ScenarioInitError(f"cities[{i}] 缺少字段: {missing}")
+
+    required_general_fields = {
+        "id", "name", "war", "command", "intel", "politics", "charm",
+        "troops", "food", "position", "faction", "is_player",
+    }
+    for i, g in enumerate(generals):
+        missing = required_general_fields - set(g.keys())
+        if missing:
+            raise ScenarioInitError(f"generals[{i}] 缺少字段: {missing}")
+
+    required_conn_fields = {"from", "to", "distance"}
+    for i, conn in enumerate(connections):
+        missing = required_conn_fields - set(conn.keys())
+        if missing:
+            raise ScenarioInitError(f"connections[{i}] 缺少字段: {missing}")
+
     if len(cities) < 3:
         raise ScenarioInitError("至少 3 座城池")
 
     if len(generals) < 5:
         raise ScenarioInitError("至少 5 名武将")
 
-    city_ids = {c["id"] for c in cities}
-    general_ids = {g["id"] for g in generals}
+    city_ids = set()
+    for c in cities:
+        if c["id"] in city_ids:
+            raise ScenarioInitError(f"重复的城池 ID: {c['id']}")
+        city_ids.add(c["id"])
 
+    general_ids = {g["id"] for g in generals}
     if len(general_ids) != len(generals):
         raise ScenarioInitError("武将 ID 不唯一")
 
@@ -203,16 +231,28 @@ def main(argv: list[str] | None = None) -> int:
 
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
-    print("Checking Hermes environment...")
-    check_environment()
+    try:
+        print("Checking Hermes environment...")
+        check_environment()
+    except HermesUnavailableError as e:
+        print(f"环境检查失败: {e}", file=sys.stderr)
+        return 1
 
     print("Generating scenario via LLM...")
     prompt = build_scenario_prompt(theme=args.theme, player_name=args.player_name)
-    raw = call_hermes(prompt)
-    scenario_data = parse_json_response(raw)
+    try:
+        raw = call_hermes(prompt)
+        scenario_data = parse_json_response(raw)
+    except (ScenarioGenerationError, ScenarioInvalidError) as e:
+        print(f"剧本生成失败: {e}", file=sys.stderr)
+        return 1
 
     print("Validating scenario...")
-    validate_scenario(scenario_data)
+    try:
+        validate_scenario(scenario_data)
+    except ScenarioInitError as e:
+        print(f"剧本校验失败: {e}", file=sys.stderr)
+        return 1
 
     print("Creating Hermes profiles...")
     factions = _extract_factions(scenario_data)
