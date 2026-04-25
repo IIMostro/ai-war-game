@@ -1,10 +1,10 @@
 [project]
 name = "ai-war-game"
-version = "0.1.0"
-description = "AI-driven sandbox warfare game built on Hermes Agent"
+version = "0.2.0"
+description = "AI-driven sandbox warfare game"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = ["litellm>=1.60.0"]
 
 [dependency-groups]
 dev = [
