@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 
 from ai_war_game import db as war_db
@@ -94,7 +95,8 @@ def run_cli(argv: list[str] | None = None) -> int:
                 if not row:
                     print("错误: 未找到玩家身份。先创建新局: new-game --theme ... --player ...")
                     continue
-                player_id = row[0]
+                player_identity = json.loads(row[0])
+                player_id = player_identity.get("id", row[0])
                 general = war_db.get_general(conn, player_id)
                 if not general:
                     print(f"错误: 未找到武将 {player_id}")

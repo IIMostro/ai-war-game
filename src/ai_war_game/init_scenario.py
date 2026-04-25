@@ -30,7 +30,7 @@ SCHEMA_HINT = json.dumps(
                 "name": "str",
                 "x": "int",
                 "y": "int",
-                "terrain": "str",
+                "terrain": "str (平原|山地|水域|森林)",
                 "owner": "str",
             }
         ],
@@ -66,20 +66,12 @@ SCHEMA_HINT = json.dumps(
     ensure_ascii=False,
 )
 
-SYSTEM_PROMPT = f"""You are a Three Kingdoms scenario generator.
-Generate a complete game world as JSON given the theme and player's chosen general.
-
-Validation rules:
-- war/cmd/intel/politics/charm: 1-100
-- loyalty: 1-100, must be null for is_player=true
-- troops: 100-100000
-- food: 1-365
-- At least 3 cities, 5 generals
-- Exactly one general with is_player=true
-- All position/city references must be valid
-
-Respond with valid JSON only following this schema:
-{SCHEMA_HINT}"""
+SYSTEM_PROMPT = """You are a Three Kingdoms scenario generator.
+Theme is Chinese Three Kingdoms era. Use Chinese names for cities, factions, generals.
+At least 3 cities, 5 generals. terrain must be one of: 平原, 山地, 水域, 森林.
+war/cmd/intel/politics/charm: 1-100. troops: 100-100000. food: 1-365.
+loyalty: null for is_player=true, 1-100 for others.
+Exactly one general with is_player=true."""
 
 
 def generate_scenario(theme: str, player_name: str) -> dict:
@@ -92,35 +84,56 @@ def _extract_factions(data: dict) -> dict[str, str]:
     """Build faction_id to faction_name mapping."""
     faction_names: dict[str, str] = {}
     for f in data.get("factions", []):
-        faction_names[f["id"]] = f["name"]
+        fid = str(f.get("id", "")).strip()
+        fname = str(f.get("name", fid)).strip()
+        if fid:
+            faction_names[fid] = fname
     for city in data.get("cities", []):
-        if city["owner"] not in faction_names:
-            faction_names[city["owner"]] = city["owner"]
+        owner = str(city.get("owner", "")).strip()
+        if owner and owner not in faction_names:
+            faction_names[owner] = owner
     for general in data.get("generals", []):
-        if general["faction"] not in faction_names:
-            faction_names[general["faction"]] = general["faction"]
+        f = str(general.get("faction", "")).strip()
+        if f and f not in faction_names:
+            faction_names[f] = f
     if "player_identity" in data:
-        fid = data["player_identity"]["faction_id"]
-        if fid not in faction_names:
+        fid = str(data["player_identity"].get("faction_id", "")).strip()
+        if fid and fid not in faction_names:
             faction_names[fid] = fid
     return faction_names
 
 
+def _clamp(val, lo, hi, default):
+    """Parse val to int and clamp between lo-hi. Return default on failure."""
+    try:
+        return max(lo, min(hi, int(val)))
+    except (ValueError, TypeError):
+        return default
+
+
 def _map_general_for_db(g: dict) -> dict:
+    raw_loyalty = g.get("loyalty")
+    if raw_loyalty is None or raw_loyalty == 0 or raw_loyalty == "" or raw_loyalty == "null":
+        loyalty = None
+    else:
+        try:
+            loyalty = max(1, min(100, int(raw_loyalty)))
+        except (ValueError, TypeError):
+            loyalty = None
     return {
-        "id": g["id"],
-        "name": g["name"],
-        "war": g["war"],
-        "cmd": g["command"],
-        "intel": g["intel"],
-        "politics": g["politics"],
-        "charm": g["charm"],
-        "loyalty": g.get("loyalty"),
-        "troops": g["troops"],
-        "food": g["food"],
-        "position_city_id": g["position"],
-        "faction_id": g["faction"],
-        "is_player": g.get("is_player", False),
+        "id": str(g.get("id", "")).strip(),
+        "name": str(g.get("name", "")).strip(),
+        "war": _clamp(g.get("war"), 1, 100, 50),
+        "cmd": _clamp(g.get("command"), 1, 100, 50),
+        "intel": _clamp(g.get("intel"), 1, 100, 50),
+        "politics": _clamp(g.get("politics"), 1, 100, 50),
+        "charm": _clamp(g.get("charm"), 1, 100, 50),
+        "loyalty": loyalty,
+        "troops": _clamp(g.get("troops"), 100, 100000, 5000),
+        "food": _clamp(g.get("food"), 1, 365, 30),
+        "position_city_id": str(g.get("position", "")).strip(),
+        "faction_id": str(g.get("faction", "")).strip(),
+        "is_player": bool(g.get("is_player", False)),
         "personality": json.dumps(g.get("personality", {}), ensure_ascii=False),
     }
 
@@ -130,26 +143,31 @@ def persist_scenario(db_path: str, scenario_data: dict) -> dict:
     graph_path = get_graph_path(db_path)
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
+    allowed_terrains = {"平原", "山地", "水域", "森林"}
+
     conn = sqlite3.connect(db_path)
     try:
         create_schema(conn)
 
         factions = _extract_factions(scenario_data)
         for fid, fname in factions.items():
-            insert_faction(conn, fid, fname)
+            insert_faction(conn, fid.strip(), fname.strip())
 
-        for city in scenario_data["cities"]:
+        for city in scenario_data.get("cities", []):
+            terrain = str(city.get("terrain", "平原")).strip()
+            if terrain not in allowed_terrains:
+                terrain = "平原"
             insert_city(
                 conn,
-                city["id"],
-                city["name"],
-                city["x"],
-                city["y"],
-                city["terrain"],
-                city["owner"],
+                str(city.get("id", "")).strip(),
+                str(city.get("name", "")).strip(),
+                _clamp(city.get("x"), 0, 1000, 0),
+                _clamp(city.get("y"), 0, 1000, 0),
+                terrain,
+                str(city.get("owner", "")).strip(),
             )
 
-        for g in scenario_data["generals"]:
+        for g in scenario_data.get("generals", []):
             mapped = _map_general_for_db(g)
             insert_general(conn, mapped)
 
