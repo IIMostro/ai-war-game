@@ -7,7 +7,7 @@ import json
 import sqlite3
 
 from ai_war_game.db import get_general, get_memories
-from ai_war_game.llm import llm_call_json
+from ai_war_game.llm import get_decision_model, llm_call_json
 
 
 def _build_personality_prompt(general: dict, memory_summary: str) -> str:
@@ -66,6 +66,8 @@ def general_decide(
     model: str | None = None,
 ) -> dict:
     """Call LLM with general personality + context, return structured decision."""
+    if model is None:
+        model = get_decision_model()
     system_prompt = _build_personality_prompt(general, memory_summary)
     user_message = json.dumps(context, ensure_ascii=False)
     return llm_call_json(system_prompt, user_message, model=model)

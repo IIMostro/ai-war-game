@@ -22,6 +22,8 @@ uv run python -m ai_war_game
 |---|---|---|
 | `AI_WAR_GAME_LLM_MODEL` | 否 | LLM 模型标识 (默认 `openai/gpt-4o-mini`) |
 | `AI_WAR_GAME_LLM_API_KEY` | 否 | API key (也支持标准 `OPENAI_API_KEY`) |
+| `AI_WAR_GAME_LLM_MODEL_SCENARIO` | 否 | 剧本生成用模型 (覆盖默认) |
+| `AI_WAR_GAME_LLM_MODEL_DECISION` | 否 | 武将决策用模型 (覆盖默认) |
 | `AI_WAR_GAME_LLM_API_BASE` | 否 | 自定义 API base URL |
 
 支持 litellm 所有格式: `openai/gpt-4`, `anthropic/claude-sonnet-4`, `ollama/llama3` 等。

@@ -8,6 +8,8 @@ import urllib.request
 from typing import Any
 
 ENV_MODEL = "AI_WAR_GAME_LLM_MODEL"
+ENV_MODEL_SCENARIO = "AI_WAR_GAME_LLM_MODEL_SCENARIO"
+ENV_MODEL_DECISION = "AI_WAR_GAME_LLM_MODEL_DECISION"
 ENV_API_KEY = "AI_WAR_GAME_LLM_API_KEY"
 ENV_API_BASE = "AI_WAR_GAME_LLM_API_BASE"
 DEFAULT_MODEL = "openai/gpt-4o-mini"
@@ -29,6 +31,16 @@ class LLMResponseError(LLMError):
 
 def _resolve_model(model: str | None) -> str:
     return model or os.environ.get(ENV_MODEL) or DEFAULT_MODEL
+
+
+def get_scenario_model() -> str:
+    """Model for scenario/world generation. Prefers task-specific env var."""
+    return os.environ.get(ENV_MODEL_SCENARIO) or _resolve_model(None)
+
+
+def get_decision_model() -> str:
+    """Model for general decision-making (battle, autonomy). Prefers task-specific env var."""
+    return os.environ.get(ENV_MODEL_DECISION) or _resolve_model(None)
 
 
 def _resolve_api_key() -> str | None:

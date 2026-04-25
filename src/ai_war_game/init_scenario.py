@@ -17,7 +17,7 @@ from ai_war_game.db import (
     log_event,
     upsert_state,
 )
-from ai_war_game.llm import llm_call_json
+from ai_war_game.llm import get_scenario_model, llm_call_json
 
 SCHEMA_HINT = json.dumps(
     {
@@ -77,7 +77,12 @@ Exactly one general with is_player=true."""
 def generate_scenario(theme: str, player_name: str) -> dict:
     """Generate scenario via LLM and return parsed JSON."""
     user_message = f"Theme: {theme}\nPlayer's chosen identity: {player_name}"
-    return llm_call_json(SYSTEM_PROMPT, user_message, json_schema_hint=SCHEMA_HINT)
+    return llm_call_json(
+        SYSTEM_PROMPT,
+        user_message,
+        json_schema_hint=SCHEMA_HINT,
+        model=get_scenario_model(),
+    )
 
 
 def _extract_factions(data: dict) -> dict[str, str]:
