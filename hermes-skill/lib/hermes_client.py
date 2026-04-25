@@ -51,6 +51,7 @@ def check_environment() -> None:
 
 def call_hermes(prompt: str) -> str:
     """调用 Hermes CLI 发送 prompt, 返回原始 stdout。失败时抛 ScenarioGenerationError。"""
+    check_environment()
     bin_path = os.environ.get(ENV_BIN, DEFAULT_BIN)
     model = os.environ.get(ENV_MODEL, "")
     config_path = os.environ.get(ENV_CONFIG, "")
@@ -88,7 +89,7 @@ def parse_json_response(raw: str) -> dict:
     """解析 LLM JSON 输出, 失败时抛 ScenarioInvalidError。"""
     try:
         return dict(json.loads(raw))
-    except (json.JSONDecodeError, ValueError) as exc:
+    except (json.JSONDecodeError, ValueError, TypeError) as exc:
         raise ScenarioInvalidError(
             f"hermes 输出不是合法 JSON: {exc}; raw={raw[:200]!r}"
         ) from exc
