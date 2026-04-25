@@ -66,6 +66,13 @@ class TestCityCRUD:
         row = cursor.fetchone()
         assert row == ("luoyang", "洛阳", 100, 200, "平原", "wei")
 
+    def test_boundary_coordinates(self, conn):
+        insert_faction(conn, "wei", "曹魏")
+        insert_city(conn, "c1", "边界0", 0, 0, "平原", "wei")
+        insert_city(conn, "c2", "边界1000", 1000, 1000, "山地", "wei")
+        cursor = conn.execute("SELECT count(*) FROM cities")
+        assert cursor.fetchone()[0] == 2
+
 
 class TestGeneralCRUD:
     def test_insert_and_query(self, conn):
@@ -98,6 +105,29 @@ class TestGeneralCRUD:
         row = cursor.fetchone()
         assert row is not None
         assert row[0] == "caocao"
+
+    def test_boundary_stats(self, conn):
+        insert_faction(conn, "wei", "曹魏")
+        insert_city(conn, "luoyang", "洛阳", 0, 0, "平原", "wei")
+        insert_general(conn, {
+            "id": "min", "name": "Min", "war": 1, "cmd": 1, "intel": 1,
+            "politics": 1, "charm": 1, "loyalty": 1, "troops": 100,
+            "food": 1, "position_city_id": "luoyang",
+            "faction_id": "wei", "is_player": False, "personality": "{}",
+        })
+        insert_general(conn, {
+            "id": "max", "name": "Max", "war": 100, "cmd": 100, "intel": 100,
+            "politics": 100, "charm": 100, "loyalty": 100, "troops": 100000,
+            "food": 365, "position_city_id": "luoyang",
+            "faction_id": "wei", "is_player": False, "personality": "{}",
+        })
+        cursor = conn.execute("SELECT count(*) FROM generals")
+        assert cursor.fetchone()[0] == 2
+
+    def test_invalid_terrain_raises(self, conn):
+        insert_faction(conn, "wei", "曹魏")
+        with pytest.raises(sqlite3.IntegrityError):
+            insert_city(conn, "bad", "Bad", 0, 0, "沙漠", "wei")
 
     def test_invalid_war_stat_raises(self, conn):
         insert_faction(conn, "wei", "曹魏")
@@ -221,4 +251,66 @@ class TestScenarioInit:
         keys = [s["key"] for s in states]
         assert "current_day" in keys
         assert "season" in keys
+        conn.close()
+
+    def test_init_empty_scenario_does_not_crash(self, tmp_path):
+        db_file = tmp_path / "test.db"
+        graph_file = tmp_path / "graph.json"
+        graph_file.write_text("[]")
+        import sqlite3
+        conn = sqlite3.connect(str(db_file))
+        from db import create_schema
+        create_schema(conn)
+        conn.close()
+        from db import init_scenario_data
+        init_scenario_data(str(db_file), str(graph_file), {})
+        conn = sqlite3.connect(str(db_file))
+        from db import get_state
+        assert get_state(conn) == []
+        conn.close()
+
+
+class TestCLI:
+    def test_init_via_main(self, tmp_path, monkeypatch):
+        from db import main
+        db_path = tmp_path / "test.db"
+        rc = main(["init", "--db-path", str(db_path)])
+        assert rc == 0
+        assert db_path.is_file()
+
+    def test_state_write_read_via_main(self, tmp_path):
+        from db import main
+        db_path = tmp_path / "test.db"
+        main(["init", "--db-path", str(db_path)])
+        rc = main(["state", "write", "current_day", "5", "5", "--db-path", str(db_path)])
+        assert rc == 0
+        import sqlite3
+        conn = sqlite3.connect(str(db_path))
+        from db import get_state
+        states = get_state(conn)
+        conn.close()
+        assert {"key": "current_day", "value": "5", "updated_day": 5} in states
+
+    def test_general_update_via_main(self, tmp_path):
+        from db import insert_city, insert_faction, insert_general, main
+        db_path = tmp_path / "test.db"
+        main(["init", "--db-path", str(db_path)])
+        import sqlite3
+        conn = sqlite3.connect(str(db_path))
+        insert_faction(conn, "wei", "曹魏")
+        insert_city(conn, "luoyang", "洛阳", 0, 0, "平原", "wei")
+        insert_general(conn, {
+            "id": "caocao", "name": "曹操",
+            "war": 72, "cmd": 86, "intel": 91,
+            "politics": 88, "charm": 80, "loyalty": None,
+            "troops": 8000, "food": 15,
+            "position_city_id": "luoyang", "faction_id": "wei",
+            "is_player": True, "personality": "{}",
+        })
+        conn.close()
+        rc = main(["general", "update", "caocao", "troops", "9999", "--db-path", str(db_path)])
+        assert rc == 0
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.execute("SELECT troops FROM generals WHERE id='caocao'")
+        assert cursor.fetchone()[0] == 9999
         conn.close()

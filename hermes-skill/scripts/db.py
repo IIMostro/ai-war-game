@@ -189,6 +189,17 @@ def add_triple(
 
 
 def init_scenario_data(db_path: str, graph_path: str, scenario: dict) -> None:
+    """Bulk-insert scenario data. Factions and cities must be pre-inserted before calling.
+
+    Processes: state, generals, events, graph keys from scenario dict.
+    """
+    import warnings
+
+    known_keys = {"state", "generals", "events", "graph", "scenario_name", "player_identity"}
+    unexpected = set(scenario.keys()) - known_keys
+    if unexpected:
+        warnings.warn(f"init_scenario_data: unexpected keys ignored: {unexpected}", stacklevel=2)
+
     conn = sqlite3.connect(db_path)
     try:
         for key, value in scenario.get("state", {}).items():
@@ -216,7 +227,7 @@ def init_scenario_data(db_path: str, graph_path: str, scenario: dict) -> None:
         conn.close()
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="AI War Game DB Manager")
     parser.add_argument("--db-path", default=None, help="Path to SQLite database file")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -281,7 +292,7 @@ def main() -> None:
     scenario_init.add_argument("json_str", help="Scenario JSON string")
     scenario_init.add_argument("--db-path", dest="scenario_init_db_path", default=None)
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if args.command == "init":
         db_path = get_db_path(getattr(args, "init_db_path", None), __file__)
@@ -337,7 +348,7 @@ def main() -> None:
             if args.field not in allowed_fields:
                 print(f"Field '{args.field}' not allowed for update")
                 conn.close()
-                return
+                return 1
             val: str | int = args.value
             if args.field in allowed_fields - {"name"}:
                 val = int(args.value)
@@ -385,6 +396,8 @@ def main() -> None:
         scenario = json.loads(args.json_str)
         init_scenario_data(db_path, graph_path, scenario)
         print(f"Scenario initialized at {db_path}")
+
+    return 0
 
 
 if __name__ == "__main__":
